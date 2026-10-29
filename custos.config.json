@@ -1,0 +1,10 @@
+{
+  "cotacaoDolar": 5.5,
+  "videosPorMes": 90,
+  "assinaturasMensaisUsd": {
+    "claude": 20,
+    "elevenlabs": 5
+  },
+  "elevenlabsUsdPorMilCaracteres": 0.3,
+  "precoCobradoBrl": 50
+}

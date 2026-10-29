@@ -1,0 +1,14 @@
+{
+  "handle": "seuperfil",
+  "narracao": {
+    "provedor": "nenhum",
+    "vozId": "",
+    "modelo": "eleven_multilingual_v2"
+  },
+  "cenas": [
+    { "texto": "Quanto eu cobro por um vídeo feito com IA?", "destaque": ["IA"], "icone": "arquivo" },
+    { "texto": "A assinatura custa uns 110 reais por mês.", "destaque": ["110"], "icone": "dinheiro" },
+    { "texto": "Se eu cobro 50 por vídeo, ela se paga no terceiro.", "destaque": ["50", "terceiro"] },
+    { "texto": "Mas tem custo de voz, tempo e imposto. Faz a conta inteira.", "destaque": ["conta", "inteira"] }
+  ]
+}

@@ -156,7 +156,12 @@ html { scrollbar-color: hsl(var(--border)) transparent; }
   .status-producao { background: hsl(var(--warn) / 0.12); border-color: hsl(var(--warn) / 0.35); }
   .status-agendado { background: rgb(var(--brand-rgb) / 0.14); border-color: rgb(var(--brand-rgb) / 0.4); }
   .status-publicado { background: hsl(var(--good) / 0.12); border-color: hsl(var(--good) / 0.35); }
-  .tpl { transition: border-color 120ms, box-shadow 120ms; }
+  .board-col { transition: background 120ms; border-radius: 4px; }
+.board-col-over { background: rgb(var(--brand-rgb) / 0.1); }
+.board-card { cursor: grab; transition: border-color 120ms; }
+.board-card:hover { border-color: hsl(var(--ring) / 0.5); }
+.board-card:active { cursor: grabbing; }
+.tpl { transition: border-color 120ms, box-shadow 120ms; }
   .tpl:hover { border-color: hsl(var(--ring) / 0.5); }
   .tpl-on { border-color: var(--tpl); box-shadow: 0 0 0 1px var(--tpl); }
 

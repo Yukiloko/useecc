@@ -207,12 +207,12 @@ export function Overview({ ws, go }: ViewProps) {
                 <li key={p.id} className="py-2 flex gap-3 items-baseline text-sm">
                   <span className="text-xs text-muted-foreground tabular-nums w-11 shrink-0 whitespace-nowrap">{p.date.slice(8)}/{p.date.slice(5, 7)}</span>
                   <span className="min-w-0 flex-1 truncate">{p.title}</span>
-                  <span className="text-xs text-muted-foreground shrink-0 max-w-[7rem] truncate">{p.format}</span>
+                  <span className={`text-xs shrink-0 tabular-nums ${p.status === "agendado" || p.status === "publicado" ? "text-good" : "text-muted-foreground"}`}>{p.status === "agendado" || p.status === "publicado" ? "pronto" : `${p.checklist.filter((c) => c.done).length}/${p.checklist.length} etapas`}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">Nenhum post para a semana. <button className="underline" onClick={() => go("calendario")}>Planejar no calendário</button></p>
+            <p className="text-sm text-muted-foreground">Nenhum post para a semana. <button className="underline" onClick={() => go("producao")}>Planejar na produção</button></p>
           )}
           <h3 className="eyebrow mt-3">Datas que vendem nos próximos 60 dias</h3>
           <ul className="grid gap-1 text-sm">

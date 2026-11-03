@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Workspace } from "./types";
+import { normalizeWorkspace } from "./templates";
 
 type SyncState = "carregando" | "salvo" | "salvando" | "local" | "erro";
 const LS_KEY = "central-mkt-workspaces";
@@ -13,7 +14,7 @@ declare global {
 function lsRead(): Workspace[] {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as Workspace[]) : [];
+    return raw ? (JSON.parse(raw) as Workspace[]).map(normalizeWorkspace) : [];
   } catch {
     return [];
   }
@@ -59,7 +60,7 @@ export function useWorkspaces() {
         (snap: any) => {
           window.clearTimeout(timer);
           done = true;
-          const rows = snap.docs.filter((d: any) => d.exists).map((d: any) => structuredClone(d.data()) as Workspace);
+          const rows = snap.docs.filter((d: any) => d.exists).map((d: any) => normalizeWorkspace(structuredClone(d.data()) as Workspace));
           rows.sort((a: Workspace, b: Workspace) => a.createdAt.localeCompare(b.createdAt));
           // mantém edições locais que ainda não foram gravadas
           setList(rows.map((r: Workspace) => pending.current[r.id] ?? r));

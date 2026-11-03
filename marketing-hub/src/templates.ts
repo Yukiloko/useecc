@@ -1,6 +1,41 @@
-import type { Channel, Journey, KeyDate, Segment, Vocabulary, Workspace, Goals, Product } from "./types";
+import type { Channel, CheckItem, Journey, KeyDate, Post, Segment, Vocabulary, Workspace, Goals, Product } from "./types";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** Etapas de produção sugeridas para cada formato do Instagram. */
+export const DEFAULT_CHECKLISTS: Record<string, string[]> = {
+  Reels: ["Roteiro e gancho", "Gravar", "Editar e legendar o vídeo", "Escolher capa", "Escrever legenda", "Agendar"],
+  Carrossel: ["Texto de cada slide", "Fotos ou arte", "Montar os slides", "Escrever legenda", "Agendar"],
+  Stories: ["Sequência de stories", "Gravar ou fotografar", "Adicionar enquete, caixinha ou link", "Publicar"],
+  Foto: ["Fotografar", "Editar", "Escrever legenda", "Agendar"],
+  Live: ["Combinar tema e convidado", "Divulgar nos stories", "Fazer a live", "Salvar no perfil"],
+};
+const GENERIC_CHECKLIST = ["Planejar", "Produzir", "Escrever legenda", "Publicar"];
+
+export function checklistFor(ws: Pick<Workspace, "checklists">, format: string): CheckItem[] {
+  const labels = ws.checklists?.[format] ?? DEFAULT_CHECKLISTS[format] ?? GENERIC_CHECKLIST;
+  return labels.map((label) => ({ id: uid(), label, done: false }));
+}
+
+/** Completa campos que posts e negócios criados antes da produção completa não tinham. */
+export function normalizeWorkspace(ws: Workspace): Workspace {
+  const checklists = ws.checklists ?? Object.fromEntries(ws.formats.filter((f) => DEFAULT_CHECKLISTS[f]).map((f) => [f, [...DEFAULT_CHECKLISTS[f]]]));
+  const posts = ws.posts.map((raw): Post => {
+    const p = raw as Partial<Post> & Pick<Post, "id" | "date" | "title" | "channelId" | "pillar" | "format" | "status">;
+    return {
+    ...p,
+    time: p.time ?? "",
+    hook: p.hook ?? "",
+    script: p.script ?? "",
+    caption: p.caption ?? "",
+    hashtags: p.hashtags ?? "",
+    cta: p.cta ?? "",
+    notes: p.notes ?? "",
+    checklist: p.checklist ?? (checklists[p.format] ?? DEFAULT_CHECKLISTS[p.format] ?? GENERIC_CHECKLIST).map((label) => ({ id: uid(), label, done: p.status === "publicado" })),
+    };
+  });
+  return { ...ws, checklists, posts };
+}
 
 interface TemplateDef {
   id: string;
@@ -230,6 +265,7 @@ export function buildWorkspace(templateId: string, name: string): Workspace {
     posts: [],
     campaigns: [],
     dates: [...t.dates],
+    checklists: Object.fromEntries(t.formats.filter((f) => DEFAULT_CHECKLISTS[f]).map((f) => [f, [...DEFAULT_CHECKLISTS[f]]])),
   };
 }
 

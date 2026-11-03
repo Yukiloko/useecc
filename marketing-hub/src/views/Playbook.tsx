@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PageHead, Field, selectCls, type ViewProps } from "../ui";
 import { brl, num } from "../lib/metrics";
-import { uid } from "../templates";
+import { DEFAULT_CHECKLISTS, uid } from "../templates";
 import type { ChannelKind, Workspace } from "../types";
 
 const KIND: Record<ChannelKind, string> = { venda: "Venda", midia: "Mídia / divulgação", relacionamento: "Relacionamento" };
@@ -78,6 +78,21 @@ export function Playbook({ ws, update }: ViewProps) {
         <div className="grid gap-3 content-start">
           <h2 className="section-title">Formatos</h2>
           <Chips id="pb-format-new" items={ws.formats} onChange={(v) => set("formats", v)} placeholder="Ex.: Unboxing" />
+        </div>
+      </section>
+
+      <section className="grid gap-3">
+        <div>
+          <h2 className="section-title">Etapas de produção por formato</h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-[62ch]">Cada post novo começa com as etapas do formato dele. Mudanças aqui valem para os próximos posts.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-x-8 gap-y-5">
+          {ws.formats.map((f) => (
+            <div key={f} className="grid gap-2 content-start">
+              <h3 className="text-sm font-semibold">{f}</h3>
+              <Chips id={`pb-chk-${f}`} items={ws.checklists?.[f] ?? DEFAULT_CHECKLISTS[f] ?? []} onChange={(v) => update((d) => { d.checklists = { ...(d.checklists ?? {}), [f]: v }; })} placeholder="Nova etapa" />
+            </div>
+          ))}
         </div>
       </section>
 

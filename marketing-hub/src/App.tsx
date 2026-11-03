@@ -4,6 +4,7 @@ import { useWorkspaces } from "./store";
 import type { Workspace } from "./types";
 import { Overview } from "./views/Overview";
 import { Calendar } from "./views/Calendar";
+import { Board } from "./views/Board";
 import { Campaigns } from "./views/Campaigns";
 import { Customers } from "./views/Customers";
 import { Results } from "./views/Results";
@@ -13,6 +14,7 @@ import { Businesses } from "./views/Businesses";
 const NAV = [
   { id: "visao", label: "Visão geral" },
   { id: "calendario", label: "Calendário" },
+  { id: "producao", label: "Produção" },
   { id: "campanhas", label: "Campanhas" },
   { id: "clientes", label: "Clientes" },
   { id: "resultados", label: "Resultados" },
@@ -93,6 +95,7 @@ export default function App() {
     body = {
       visao: <Overview {...p} />,
       calendario: <Calendar {...p} />,
+      producao: <Board {...p} />,
       campanhas: <Campaigns {...p} />,
       clientes: <Customers {...p} />,
       resultados: <Results key={ws.id} {...p} />,

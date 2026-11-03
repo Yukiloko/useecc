@@ -18,15 +18,28 @@ export interface Product {
 
 export type PostStatus = "ideia" | "producao" | "agendado" | "publicado";
 
+export interface CheckItem {
+  id: string;
+  label: string;
+  done: boolean;
+}
+
 export interface Post {
   id: string;
   date: string; // YYYY-MM-DD
+  time: string; // HH:MM, horário planejado de publicação
   title: string;
   channelId: string;
   pillar: string;
   format: string;
   status: PostStatus;
-  notes: string;
+  hook: string; // primeira frase / primeiros 3 segundos
+  script: string; // roteiro: cenas do Reels ou um slide por linha no carrossel
+  caption: string;
+  hashtags: string;
+  cta: string;
+  notes: string; // referências e observações
+  checklist: CheckItem[];
 }
 
 export type CampaignStatus = "planejada" | "ativa" | "pausada" | "encerrada";
@@ -114,5 +127,7 @@ export interface Workspace {
   journeys: Journey[];
   weekly: WeeklyEntry[];
   dates: KeyDate[];
+  /** Etapas de produção padrão por formato (nome do formato → etapas). */
+  checklists: Record<string, string[]>;
   example?: boolean;
 }

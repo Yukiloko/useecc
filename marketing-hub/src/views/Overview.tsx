@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { PageHead, Empty, type ViewProps } from "../ui";
 import { brl, num, periods, delta, fmtDay, iso, parseIso, weeksOf, totals } from "../lib/metrics";
 import type { Workspace } from "../types";
@@ -12,7 +13,7 @@ function Kpi({ label, value, sub, d, goodWhenUp = true, goal }: { label: string;
       <p className="eyebrow">{label}</p>
       <p className="font-display text-[1.6rem] leading-none tabular-nums mt-1">{value}</p>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
-        {has && <span className={good ? "text-good font-medium" : "text-bad font-medium"}>{up ? "▲" : "▼"} {num(Math.abs((d ?? 0) * 100), 0)}%</span>}
+        {has && <span className={`inline-flex items-center gap-0.5 font-medium ${good ? "text-good" : "text-bad"}`}>{up ? <ArrowUp className="size-3" aria-label="subiu" /> : <ArrowDown className="size-3" aria-label="caiu" />}{num(Math.abs((d ?? 0) * 100), 0)}%</span>}
         {sub && <span>{sub}</span>}
       </div>
       {goal && (
@@ -20,7 +21,7 @@ function Kpi({ label, value, sub, d, goodWhenUp = true, goal }: { label: string;
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, goal.pct * 100)}%` }} />
           </div>
-          <p className="text-[11px] text-muted-foreground">{goal.text}</p>
+          <p className="text-xs text-muted-foreground">{goal.text}</p>
         </div>
       )}
     </div>
@@ -56,7 +57,7 @@ function WeeklyChart({ ws }: { ws: Workspace }) {
           {Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step).map((v) => (
             <g key={v}>
               <line x1={L} x2={W} y1={y(v)} y2={y(v)} className="stroke-border" strokeDasharray={v ? "2 4" : undefined} />
-              <text x={L - 6} y={y(v) + 4} textAnchor="end" className="fill-muted-foreground text-[10px] tabular-nums">{num(v)}</text>
+              <text x={L - 6} y={y(v) + 4} textAnchor="end" className="fill-muted-foreground text-[12px] tabular-nums">{num(v)}</text>
             </g>
           ))}
           {data.map((d, i) => {
@@ -71,8 +72,8 @@ function WeeklyChart({ ws }: { ws: Workspace }) {
                   acc += p;
                   return p ? <rect key={j} x={x} width={bw * 0.64} y={y1} height={Math.max(0, y0 - y1)} className="fill-brand" opacity={shades[j % 4]} /> : null;
                 })}
-                {i === data.length - 1 && <text x={x + bw * 0.32} y={y(total) - 5} textAnchor="middle" className="fill-foreground text-[10px] font-semibold tabular-nums">{num(total)}</text>}
-                <text x={x + bw * 0.32} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[10px]">{fmtDay(d.w)}</text>
+                {i === data.length - 1 && <text x={x + bw * 0.32} y={y(total) - 5} textAnchor="middle" className="fill-foreground text-[12px] font-semibold tabular-nums">{num(total)}</text>}
+                <text x={x + bw * 0.32} y={H - 8} textAnchor="middle" className="fill-muted-foreground text-[12px]">{fmtDay(d.w)}</text>
               </g>
             );
           })}
@@ -81,6 +82,7 @@ function WeeklyChart({ ws }: { ws: Workspace }) {
     </figure>
   );
 }
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 function niceStep(max: number) {
   const raw = max / 4;
   const p = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -127,7 +129,7 @@ export function Overview({ ws, go }: ViewProps) {
 
   return (
     <div className="grid gap-8">
-      <PageHead eyebrow={cur.length ? `Últimas ${cur.length} semanas registradas · ${fmtDay(cur[0])} a ${fmtDay(cur[cur.length - 1])}` : "Visão geral"} title={`Como está o marketing de ${ws.name}`}>
+      <PageHead sub={cur.length ? `Últimas ${cur.length} semanas registradas, de ${fmtDay(cur[0])} a ${fmtDay(cur[cur.length - 1])}` : undefined} title={`Como está o marketing de ${ws.name}`}>
         <Button variant="outline" size="sm" onClick={() => go("resultados")}>Registrar semana</Button>
       </PageHead>
 
@@ -145,28 +147,28 @@ export function Overview({ ws, go }: ViewProps) {
             <Kpi label={V.orders} value={num(curT.orders)} d={prev.length ? delta(curT.orders, prevT.orders) : undefined} goal={{ pct: curT.orders / (ws.goals.orders * monthFactor), text: `meta ${num(ws.goals.orders)}/mês` }} />
             <Kpi label="Faturamento bruto" value={brl(curT.revenue)} sub={`líquido ${brl(curT.net)}`} d={prev.length ? delta(curT.revenue, prevT.revenue) : undefined} goal={{ pct: curT.revenue / (ws.goals.revenue * monthFactor), text: `meta ${brl(ws.goals.revenue)}/mês` }} />
             <Kpi label="Ticket médio" value={brl(curT.ticket, 2)} d={prev.length ? delta(curT.ticket, prevT.ticket) : undefined} />
-            <Kpi label={`CAC · custo por ${V.customer} novo`} value={curT.cac ? brl(curT.cac, 2) : "—"} sub={`meta até ${brl(ws.goals.cac)}`} d={prev.length && prevT.cac ? delta(curT.cac, prevT.cac) : undefined} goodWhenUp={false} />
-            <Kpi label="MER · receita ÷ mídia" value={curT.mer ? num(curT.mer, 1) + "×" : "—"} sub={`meta ${num(ws.goals.mer, 1)}×`} d={prev.length && prevT.mer ? delta(curT.mer, prevT.mer) : undefined} />
+            <Kpi label={`CAC (custo por ${V.customer} novo)`} value={curT.cac ? brl(curT.cac, 2) : "—"} sub={`meta até ${brl(ws.goals.cac)}`} d={prev.length && prevT.cac ? delta(curT.cac, prevT.cac) : undefined} goodWhenUp={false} />
+            <Kpi label="MER (receita ÷ mídia)" value={curT.mer ? num(curT.mer, 1) + "×" : "—"} sub={`meta ${num(ws.goals.mer, 1)}×`} d={prev.length && prevT.mer ? delta(curT.mer, prevT.mer) : undefined} />
           </section>
 
           <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-8">
             <section className="grid gap-4 min-w-0">
-              <h2 className="section-title">{V.orders} por semana</h2>
+              <h2 className="section-title">{cap(V.orders)} por semana</h2>
               <WeeklyChart ws={ws} />
             </section>
             <section className="grid gap-3 min-w-0 content-start">
-              <h2 className="section-title">Por canal de venda · 4 semanas</h2>
+              <h2 className="section-title">Por canal de venda nas 4 semanas</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm tabular-nums">
                   <thead className="text-xs text-muted-foreground">
-                    <tr className="border-b"><th className="text-left font-medium py-2">Canal</th><th className="text-right font-medium">{V.orders}</th><th className="text-right font-medium">Comissão</th><th className="text-right font-medium">Líquido</th></tr>
+                    <tr className="border-b"><th className="text-left font-medium py-2">Canal</th><th className="text-right font-medium">{cap(V.orders)}</th><th className="text-right font-medium">Comissão</th><th className="text-right font-medium">Líquido</th></tr>
                   </thead>
                   <tbody>
                     {sales.map((c) => {
                       const t = totals(ws, curRows.filter((r) => r.channelId === c.id));
                       return (
                         <tr key={c.id} className="border-b last:border-0">
-                          <td className="py-2 pr-2">{c.name}<div className="text-[11px] text-muted-foreground">{num(curT.revenue ? (t.revenue / curT.revenue) * 100 : 0)}% da receita</div></td>
+                          <td className="py-2 pr-2">{c.name}<div className="text-xs text-muted-foreground">{num(curT.revenue ? (t.revenue / curT.revenue) * 100 : 0)}% da receita</div></td>
                           <td className="text-right">{num(t.orders)}</td>
                           <td className="text-right text-muted-foreground">{c.fee ? `${num(c.fee)}%` : "—"}</td>
                           <td className="text-right font-medium">{brl(t.net)}</td>
@@ -200,19 +202,19 @@ export function Overview({ ws, go }: ViewProps) {
         <section className="grid gap-3 content-start min-w-0">
           <h2 className="section-title">Próximos 7 dias</h2>
           {nextPosts.length ? (
-            <ul className="grid divide-y border-y">
+            <ul className="grid grid-cols-[minmax(0,1fr)] divide-y border-y">
               {nextPosts.slice(0, 6).map((p) => (
                 <li key={p.id} className="py-2 flex gap-3 items-baseline text-sm">
-                  <span className="font-mono text-xs text-muted-foreground w-11 shrink-0 whitespace-nowrap">{p.date.slice(8)}/{p.date.slice(5, 7)}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums w-11 shrink-0 whitespace-nowrap">{p.date.slice(8)}/{p.date.slice(5, 7)}</span>
                   <span className="min-w-0 flex-1 truncate">{p.title}</span>
-                  <span className="text-[11px] text-muted-foreground shrink-0 max-w-[7rem] truncate">{p.format}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 max-w-[7rem] truncate">{p.format}</span>
                 </li>
               ))}
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">Nenhum post para a semana. <button className="underline" onClick={() => go("calendario")}>Planejar no calendário</button></p>
           )}
-          <h3 className="eyebrow mt-3">Datas que vendem · 60 dias</h3>
+          <h3 className="eyebrow mt-3">Datas que vendem nos próximos 60 dias</h3>
           <ul className="grid gap-1 text-sm">
             {upcoming.slice(0, 5).map((d) => (
               <li key={d.md + d.name} className="flex justify-between gap-3"><span className="min-w-0 truncate">{d.name}</span><span className="text-muted-foreground tabular-nums shrink-0">{d.days === 0 ? "hoje" : `em ${d.days} d`}</span></li>
@@ -223,11 +225,11 @@ export function Overview({ ws, go }: ViewProps) {
         <section className="grid gap-3 content-start min-w-0">
           <h2 className="section-title">Campanhas ativas</h2>
           {active.length ? (
-            <ul className="grid divide-y border-y">
+            <ul className="grid grid-cols-[minmax(0,1fr)] divide-y border-y">
               {active.map((c) => (
                 <li key={c.id} className="py-2.5 grid gap-1 text-sm">
                   <div className="flex justify-between gap-2"><span className="font-medium truncate">{c.name}</span><span className="tabular-nums shrink-0">{c.spent ? num(c.revenue / c.spent, 1) + "×" : "—"}</span></div>
-                  <div className="flex justify-between gap-2 text-xs text-muted-foreground"><span className="truncate">{ch(c.channelId)}{c.coupon && ` · ${c.coupon}`}</span><span className="tabular-nums shrink-0">{brl(c.spent)} de {brl(c.budget)}</span></div>
+                  <div className="flex justify-between gap-2 text-xs text-muted-foreground"><span className="min-w-0">{ch(c.channelId)}{c.coupon && <>, cupom <span className="font-mono">{c.coupon}</span></>}</span><span className="tabular-nums shrink-0">{brl(c.spent)} de {brl(c.budget)}</span></div>
                 </li>
               ))}
             </ul>

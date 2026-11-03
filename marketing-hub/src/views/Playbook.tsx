@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -18,7 +19,7 @@ function Chips({ id, items, onChange, placeholder }: { id: string; items: string
         {items.map((it, i) => (
           <li key={it + i} className="inline-flex items-center gap-1 rounded-full border bg-card pl-3 pr-1 py-0.5 text-sm">
             {it}
-            <button aria-label={`Remover ${it}`} className="rounded-full size-5 grid place-items-center text-muted-foreground hover:bg-muted" onClick={() => onChange(items.filter((_, j) => j !== i))}>×</button>
+            <button aria-label={`Remover ${it}`} className="rounded-full size-5 grid place-items-center text-muted-foreground hover:bg-muted" onClick={() => onChange(items.filter((_, j) => j !== i))}><X className="size-3" /></button>
           </li>
         ))}
       </ul>
@@ -35,8 +36,7 @@ export function Playbook({ ws, update }: ViewProps) {
   const V = ws.vocab;
   return (
     <div className="grid gap-10">
-      <PageHead eyebrow="Playbook do negócio" title="Marca, canais, cardápio e metas" />
-      <p className="text-sm text-muted-foreground -mt-6 max-w-[70ch]">Tudo aqui é a estrutura que se replica. Ao criar outra frente de negócio a partir desta, canais, pilares, segmentos, régua, metas e datas vão junto. Os resultados e posts ficam.</p>
+      <PageHead title="Playbook do negócio" sub="Marca, canais, cardápio e metas. Quando você replica este negócio para outra frente, canais, pilares, segmentos, régua, metas e datas vão junto. Posts, campanhas e resultados não são copiados." />
 
       <section className="grid gap-4">
         <h2 className="section-title">Identidade</h2>
@@ -100,7 +100,7 @@ export function Playbook({ ws, update }: ViewProps) {
                   </td>
                   <td className="px-2 py-1.5 w-28"><Input id={`ch-fee-${c.id}`} aria-label="Comissão" type="number" min={0} max={100} step="0.1" className="h-8 text-right" value={c.fee} onChange={(e) => update((d) => { d.channels[i].fee = Number(e.target.value); })} /></td>
                   <td className="px-2 w-10">
-                    <Button size="sm" variant="ghost" aria-label={`Remover ${c.name}`} className="text-muted-foreground" disabled={ws.weekly.some((w) => w.channelId === c.id) || ws.campaigns.some((x) => x.channelId === c.id)} title="Canais com resultados ou campanhas não podem ser removidos" onClick={() => update((d) => { d.channels.splice(i, 1); })}>×</Button>
+                    <Button size="sm" variant="ghost" aria-label={`Remover ${c.name}`} className="text-muted-foreground" disabled={ws.weekly.some((w) => w.channelId === c.id) || ws.campaigns.some((x) => x.channelId === c.id)} title="Canais com resultados ou campanhas não podem ser removidos" onClick={() => update((d) => { d.channels.splice(i, 1); })}><X className="size-4" /></Button>
                   </td>
                 </tr>
               ))}
@@ -125,9 +125,9 @@ export function Playbook({ ws, update }: ViewProps) {
                     <td className="px-2 py-1.5"><Input id={`pr-name-${p.id}`} aria-label="Produto" className="h-8" value={p.name} onChange={(e) => update((d) => { d.products[i].name = e.target.value; })} /></td>
                     <td className="px-2 py-1.5 w-28"><Input id={`pr-price-${p.id}`} aria-label="Preço" type="number" min={0} step="any" className="h-8 text-right" value={p.price} onChange={(e) => update((d) => { d.products[i].price = Number(e.target.value); })} /></td>
                     <td className="px-2 py-1.5 w-28"><Input id={`pr-cost-${p.id}`} aria-label="Custo" type="number" min={0} step="any" className="h-8 text-right" value={p.cost} onChange={(e) => update((d) => { d.products[i].cost = Number(e.target.value); })} /></td>
-                    <td className={`px-2 text-right w-32 ${m < 0.5 ? "text-warn" : ""}`}>{num(m * 100)}%<div className="text-[11px] text-muted-foreground">{brl(p.price - p.cost, 2)}/un.</div></td>
+                    <td className={`px-2 text-right w-32 ${m < 0.5 ? "text-warn" : ""}`}>{num(m * 100)}%<div className="text-xs text-muted-foreground">{brl(p.price - p.cost, 2)}/un.</div></td>
                     <td className="px-2 text-center"><Switch id={`pr-hero-${p.id}`} aria-label="Carro-chefe" checked={p.hero} onCheckedChange={(v) => update((d) => { d.products[i].hero = v; })} /></td>
-                    <td className="px-2 w-10"><Button size="sm" variant="ghost" aria-label={`Remover ${p.name}`} className="text-muted-foreground" onClick={() => update((d) => { d.products.splice(i, 1); })}>×</Button></td>
+                    <td className="px-2 w-10"><Button size="sm" variant="ghost" aria-label={`Remover ${p.name}`} className="text-muted-foreground" onClick={() => update((d) => { d.products.splice(i, 1); })}><X className="size-4" /></Button></td>
                   </tr>
                 );
               })}
@@ -148,7 +148,7 @@ export function Playbook({ ws, update }: ViewProps) {
             <li key={i} className="flex gap-2 items-center">
               <Input id={`dt-md-${i}`} aria-label="Dia e mês (MM-DD)" className="h-8 w-20 font-mono text-xs" value={k.md} onChange={(e) => update((d) => { d.dates[i].md = e.target.value; })} />
               <Input id={`dt-name-${i}`} aria-label="Nome da data" className="h-8" value={k.name} onChange={(e) => update((d) => { d.dates[i].name = e.target.value; })} />
-              <Button size="sm" variant="ghost" aria-label="Remover data" className="text-muted-foreground" onClick={() => update((d) => { d.dates.splice(i, 1); })}>×</Button>
+              <Button size="sm" variant="ghost" aria-label="Remover data" className="text-muted-foreground" onClick={() => update((d) => { d.dates.splice(i, 1); })}><X className="size-4" /></Button>
             </li>
           ))}
         </ul>

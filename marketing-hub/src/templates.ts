@@ -39,7 +39,7 @@ export const TEMPLATES: TemplateDef[] = [
   {
     id: "doceria-delivery",
     label: "Doceria delivery",
-    vertical: "Brownies e doces · delivery",
+    vertical: "Brownies e doces por delivery",
     blurb: "Marketplaces de delivery, Instagram e WhatsApp. Foco em recompra e datas de presente.",
     color: "#6B3A22",
     vocab: deliveryVocab,
@@ -78,7 +78,7 @@ export const TEMPLATES: TemplateDef[] = [
       ...commonDates,
       { md: "04-05", name: "Páscoa (data móvel, conferir)" },
       { md: "07-07", name: "Dia Mundial do Chocolate" },
-      { md: "12-08", name: "Dia do Brownie (EUA) · gancho de conteúdo" },
+      { md: "12-08", name: "Dia do Brownie nos EUA (gancho de conteúdo)" },
     ],
   },
   {

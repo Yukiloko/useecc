@@ -113,7 +113,7 @@ export default function App() {
             ) : (
               <p className="font-display text-lg">Nenhum negócio</p>
             )}
-            {ws && <p className="text-[11px] opacity-70 truncate">{ws.vertical}</p>}
+            {ws && <p className="text-xs opacity-70 truncate">{ws.vertical}</p>}
           </div>
           <nav aria-label="Seções" className="rail-nav">
             {NAV.map((n) => (

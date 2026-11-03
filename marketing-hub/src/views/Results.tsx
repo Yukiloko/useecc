@@ -61,7 +61,7 @@ export function Results({ ws, update }: ViewProps) {
 
   return (
     <div className="grid gap-8">
-      <PageHead eyebrow="Resultados da semana" title="Registre os números uma vez por semana" />
+      <PageHead title="Resultados da semana" sub="Lance os números uma vez por semana. A visão geral é calculada a partir daqui." />
       <section className="grid gap-4">
         <div className="flex flex-wrap items-end gap-4">
           <Field label="Semana começando em (segunda)" htmlFor="res-week">
@@ -74,15 +74,15 @@ export function Results({ ws, update }: ViewProps) {
             <thead className="text-xs text-muted-foreground bg-muted/50">
               <tr className="border-b">
                 <th className="text-left font-medium px-3 py-2">Canal de venda</th>
-                <th className="text-right font-medium px-2">{V.orders}</th>
+                <th className="text-right font-medium px-2">{V.orders.charAt(0).toUpperCase() + V.orders.slice(1)}</th>
                 <th className="text-right font-medium px-2">Faturamento (R$)</th>
-                <th className="text-right font-medium px-2">{V.customers} novos</th>
+                <th className="text-right font-medium px-2">{V.customers.charAt(0).toUpperCase() + V.customers.slice(1)} novos</th>
               </tr>
             </thead>
             <tbody>
               {sales.map((c) => (
                 <tr key={c.id} className="border-b last:border-0">
-                  <td className="px-3 py-1.5">{c.name}{c.fee ? <span className="text-[11px] text-muted-foreground"> · {c.fee}% comissão</span> : null}</td>
+                  <td className="px-3 py-1.5">{c.name}{c.fee ? <span className="text-xs text-muted-foreground"> ({c.fee}% de comissão)</span> : null}</td>
                   <td className="px-2 py-1.5 w-28">{numIn(c.id, "orders", `${V.orders} ${c.name}`)}</td>
                   <td className="px-2 py-1.5 w-36">{numIn(c.id, "revenue", `Faturamento ${c.name}`)}</td>
                   <td className="px-2 py-1.5 w-28">{numIn(c.id, "newCustomers", `Novos ${c.name}`)}</td>
@@ -119,7 +119,7 @@ export function Results({ ws, update }: ViewProps) {
               <thead className="text-xs text-muted-foreground">
                 <tr className="border-b">
                   <th className="text-left font-medium py-2">Semana</th>
-                  <th className="text-right font-medium">{V.orders}</th>
+                  <th className="text-right font-medium">{V.orders.charAt(0).toUpperCase() + V.orders.slice(1)}</th>
                   <th className="text-right font-medium">Bruto</th>
                   <th className="text-right font-medium">Líquido</th>
                   <th className="text-right font-medium">Ticket</th>

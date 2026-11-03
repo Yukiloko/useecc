@@ -37,7 +37,7 @@ export function Campaigns({ ws, update }: ViewProps) {
 
   return (
     <div className="grid gap-6">
-      <PageHead eyebrow="Campanhas e promoções" title="O que está rodando e quanto volta">
+      <PageHead title="Campanhas e promoções" sub="O que está rodando, quanto já custou e quanto voltou em vendas.">
         <Button size="sm" onClick={() => setEdit(blank())}>Nova campanha</Button>
       </PageHead>
 
@@ -59,7 +59,7 @@ export function Campaigns({ ws, update }: ViewProps) {
                 <th className="text-left font-medium">Período</th>
                 <th className="text-left font-medium">Status</th>
                 <th className="text-right font-medium">Orçamento</th>
-                <th className="text-right font-medium">{V.orders}</th>
+                <th className="text-right font-medium">{V.orders.charAt(0).toUpperCase() + V.orders.slice(1)}</th>
                 <th className="text-right font-medium">Custo/{V.order}</th>
                 <th className="text-right font-medium px-3">ROAS</th>
               </tr>
@@ -73,7 +73,7 @@ export function Campaigns({ ws, update }: ViewProps) {
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/40 cursor-pointer" onClick={() => setEdit(c)}>
                     <td className="px-3 py-2.5">
                       <button className="text-left font-medium hover:underline" onClick={(e) => { e.stopPropagation(); setEdit(c); }}>{c.name}</button>
-                      <div className="text-[11px] text-muted-foreground">{ch(c.channelId)} · {c.objective}{c.coupon && <> · <span className="font-mono">{c.coupon}</span></>}</div>
+                      <div className="text-xs text-muted-foreground">{ch(c.channelId)}, {c.objective.toLowerCase()}{c.coupon && <>, cupom <span className="font-mono">{c.coupon}</span></>}</div>
                     </td>
                     <td className="text-xs text-muted-foreground whitespace-nowrap">{fmtDay(c.start)} – {fmtDay(c.end)}</td>
                     <td><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill></td>

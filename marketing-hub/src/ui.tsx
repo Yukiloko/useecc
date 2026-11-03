@@ -9,12 +9,12 @@ export interface ViewProps {
   go: (view: string) => void;
 }
 
-export function PageHead({ eyebrow, title, children }: { eyebrow: string; title: string; children?: ReactNode }) {
+export function PageHead({ sub, title, children }: { sub?: ReactNode; title: string; children?: ReactNode }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4 border-b pb-5">
-      <div className="min-w-0">
-        <p className="eyebrow">{eyebrow}</p>
-        <h1 className="font-display text-2xl md:text-[1.75rem] leading-tight mt-1 text-balance">{title}</h1>
+      <div className="min-w-0 grid gap-1.5">
+        <h1 className="font-display text-2xl md:text-[1.75rem] leading-tight text-balance">{title}</h1>
+        {sub && <p className="text-sm text-muted-foreground max-w-[62ch]">{sub}</p>}
       </div>
       {children && <div className="flex flex-wrap gap-2">{children}</div>}
     </header>
@@ -28,7 +28,7 @@ export function Field({ label, htmlFor, children, hint, className }: { label: st
         {label}
       </Label>
       {children}
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -43,7 +43,7 @@ const TONES: Record<string, string> = {
 
 export function Pill({ tone = "neutral", children, className }: { tone?: keyof typeof TONES | string; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap", TONES[tone] ?? TONES.neutral, className)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", TONES[tone] ?? TONES.neutral, className)}>
       {children}
     </span>
   );

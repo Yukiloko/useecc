@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -26,13 +27,13 @@ export function Customers({ ws, update }: ViewProps) {
   const max = Math.max(1, ...ws.segments.map((s) => s.count));
   return (
     <div className="grid gap-8">
-      <PageHead eyebrow={`${V.customers} e relacionamento`} title="Segmentos, mensagens e régua de contato">
+      <PageHead title={`${V.customers.charAt(0).toUpperCase() + V.customers.slice(1)} e relacionamento`} sub="Grupos da sua base, a mensagem pronta para cada um e os contatos que acontecem depois de cada pedido.">
         <Button size="sm" variant="outline" onClick={() => update((d) => { d.segments.push({ id: uid(), name: "Novo segmento", rule: "", count: 0, message: "Oi, {nome}!" }); })}>Novo segmento</Button>
       </PageHead>
 
       <section className="grid gap-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="section-title">Segmentos da base · {num(total)} {V.customers}</h2>
+          <h2 className="section-title">Segmentos da base ({num(total)} {V.customers})</h2>
           <p className="text-xs text-muted-foreground">Atualize as quantidades a partir da sua lista de {V.customers} ou do relatório do marketplace. Use {"{nome}"} na mensagem.</p>
         </div>
         {ws.segments.length === 0 && <Empty title="Sem segmentos" body="Separe sua base por comportamento (novos, recorrentes, em risco) e tenha uma mensagem pronta para cada grupo." />}
@@ -89,7 +90,7 @@ export function Customers({ ws, update }: ViewProps) {
                   </td>
                   <td className="px-2 py-1.5"><Input id={`jr-msg-${j.id}`} aria-label="O que enviar" className="h-8" value={j.message} onChange={(e) => update((d) => { d.journeys[i].message = e.target.value; })} /></td>
                   <td className="px-2 text-center"><Switch id={`jr-on-${j.id}`} aria-label="Ativo" checked={j.active} onCheckedChange={(v) => update((d) => { d.journeys[i].active = v; })} /></td>
-                  <td className="px-2"><Button size="sm" variant="ghost" aria-label="Remover contato" className="text-muted-foreground" onClick={() => update((d) => { d.journeys.splice(i, 1); })}>×</Button></td>
+                  <td className="px-2"><Button size="sm" variant="ghost" aria-label="Remover contato" className="text-muted-foreground" onClick={() => update((d) => { d.journeys.splice(i, 1); })}><X className="size-4" /></Button></td>
                 </tr>
               ))}
               {ws.journeys.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-sm text-muted-foreground">Nenhum contato na régua.</td></tr>}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Plus, Gift } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -66,15 +67,15 @@ export function Calendar({ ws, update }: ViewProps) {
 
   return (
     <div className="grid gap-6">
-      <PageHead eyebrow="Calendário de conteúdo" title={monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}>
-        <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} aria-label="Mês anterior">←</Button>
+      <PageHead title={monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}>
+        <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} aria-label="Mês anterior"><ChevronLeft className="size-4" /></Button>
         <Button variant="outline" size="sm" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Hoje</Button>
-        <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} aria-label="Próximo mês">→</Button>
+        <Button variant="outline" size="sm" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} aria-label="Próximo mês"><ChevronRight className="size-4" /></Button>
         <Button size="sm" onClick={() => setEdit(newPost(today.startsWith(monthKey) ? today : iso(month)))}>Novo post</Button>
       </PageHead>
 
       <section className="grid gap-2">
-        <h2 className="eyebrow">Equilíbrio dos pilares no mês · {monthPosts.length} posts</h2>
+        <h2 className="eyebrow">Posts do mês por pilar ({monthPosts.length} no total)</h2>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {pillarCount.map(({ p, n }) => (
             <div key={p} className="grid gap-1 min-w-[120px] flex-1 max-w-[220px]">
@@ -87,7 +88,7 @@ export function Calendar({ ws, update }: ViewProps) {
 
       <div className="hidden md:grid grid-cols-7 border-l border-t rounded-md overflow-hidden">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="border-r border-b px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/50">{w}</div>
+          <div key={w} className="border-r border-b px-2 py-1.5 text-xs text-muted-foreground bg-muted/50">{w}</div>
         ))}
         {cells.map((d, i) => (
           <div key={i} className={`border-r border-b min-h-[112px] p-1.5 grid content-start gap-1 ${d ? "bg-card" : "bg-muted/30"}`}>
@@ -95,15 +96,15 @@ export function Calendar({ ws, update }: ViewProps) {
               <>
                 <div className="flex items-center justify-between gap-1">
                   <span className={`text-xs tabular-nums ${d === today ? "bg-primary text-primary-foreground rounded px-1.5" : "text-muted-foreground"}`}>{parseIso(d).getDate()}</span>
-                  <button className="text-muted-foreground hover:text-foreground text-sm leading-none px-1 rounded focus-visible:ring-1 ring-ring" onClick={() => setEdit(newPost(d))} aria-label={`Adicionar post em ${d}`}>+</button>
+                  <button className="text-muted-foreground hover:text-foreground p-0.5 rounded focus-visible:ring-1 ring-ring" onClick={() => setEdit(newPost(d))} aria-label={`Adicionar post em ${d}`}><Plus className="size-3.5" /></button>
                 </div>
                 {dateFor(d).map((k) => (
-                  <span key={k.name} className="text-[10px] leading-tight text-brand-ink font-medium">◆ {k.name}</span>
+                  <span key={k.name} className="text-xs leading-tight text-brand-ink font-medium flex gap-1 items-start"><Gift className="size-3 shrink-0 mt-px" aria-hidden />{k.name}</span>
                 ))}
                 {ws.posts.filter((p) => p.date === d).map((p) => (
                   <button key={p.id} onClick={() => setEdit(p)} className={`post-chip status-${p.status} text-left`}>
                     <span className="block truncate">{p.title || "Sem título"}</span>
-                    <span className="block text-[10px] opacity-70 truncate">{p.format}</span>
+                    <span className="block opacity-75 truncate">{p.format}</span>
                   </button>
                 ))}
               </>
@@ -117,10 +118,10 @@ export function Calendar({ ws, update }: ViewProps) {
         {monthPosts.map((p) => (
           <li key={p.id}>
             <button onClick={() => setEdit(p)} className="w-full text-left py-3 flex gap-3 items-start">
-              <span className="font-mono text-xs w-10 shrink-0 pt-0.5">{parseIso(p.date).getDate()}</span>
+              <span className="text-xs tabular-nums w-10 shrink-0 pt-0.5">{parseIso(p.date).getDate()}</span>
               <span className="min-w-0 flex-1 grid gap-1">
                 <span className="text-sm truncate">{p.title || "Sem título"}</span>
-                <span className="text-xs text-muted-foreground">{p.format} · {p.pillar}</span>
+                <span className="text-xs text-muted-foreground">{p.format}, {p.pillar}</span>
               </span>
               <Pill tone={POST_STATUS[p.status].tone}>{POST_STATUS[p.status].label}</Pill>
             </button>

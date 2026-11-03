@@ -22,7 +22,7 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 
 ## Operating Context
 
-- Canais de venda atuais: iFood, WhatsApp / pedido direto, site ou app próprio e outros marketplaces. 99Food entra em breve.
+- Canais de venda atuais: iFood, WhatsApp / pedido direto, site ou app próprio e outros marketplaces. A 99Food não é usada hoje; entrar nela é só uma possibilidade, sem data.
 - Divulgação no Instagram e anúncios no Meta Ads; relacionamento por WhatsApp (conversa e lista de transmissão).
 - Os números vêm dos painéis de cada canal e são lançados à mão uma vez por semana. Não há integração automática.
 - Datas comemorativas (Páscoa, Dia dos Namorados, Dia do Chocolate, Black Friday, Natal) puxam campanhas e conteúdo.
@@ -32,7 +32,7 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 - App React publicado como Artifact no claude.ai, privado para a dona; os dados de cada negócio ficam no banco do Artifact (`workspaces/<id>`), com `localStorage` como reserva fora do claude.ai.
 - Telas: visão geral, calendário de conteúdo, campanhas, clientes e régua de relacionamento, resultados semanais, playbook do negócio e negócios (modelos e replicação).
 - Termos usados: pedido, ticket médio, comissão, faturamento líquido, CAC, MER (faturamento ÷ investimento em mídia), ROAS, régua de relacionamento, segmentos, pilares de conteúdo.
-- Em aberto: quais serão as outras frentes de negócio; quando a 99Food entra; se haverá integração automática com os canais.
+- Em aberto: quais serão as outras frentes de negócio; se a 99Food vai entrar e quando; se haverá integração automática com os canais.
 
 ## Brand Commitments
 

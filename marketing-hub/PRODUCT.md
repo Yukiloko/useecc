@@ -36,12 +36,18 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 
 ## Brand Commitments
 
-Nenhum ainda. Nome, tom de voz, cores e fontes da marca de brownies não estão definidos. O negócio de exemplo se chama "Brownieria (exemplo)" e não representa a marca real.
+- Nome: LUV Brownies. Instagram: @luv.browniess.
+- Identidade (artes no Canva: "LUV-posts-editavel", "Menu de sabores da LUV Brownies", "Post de apresentação da LUV Brownies"): vermelho #B5122F, creme #FFF1DC e marrom chocolate; mascote de um brownie que anda; letreiro "LUV" em letras grossas e arredondadas.
+- Voz: o LUV fala em primeira pessoa ("Prazer, eu sou o LUV"), com humor leve e frases curtas. Promessa: "Seu novo brownie favorito." Textura: "casquinha por fora, molhadinho por dentro". Chamada: "Peça pelo link na bio ou pelo direct."
+- Cardápio de estreia: Tradicional, Brookie (metade brownie, metade cookie), Red Velvet e Com Cobertura, embalados um a um com o selo LUV; Caixa LUV com 4 brownies e 4 sabores para presente.
 
 ## Evidence on Hand
 
 - Os números, posts e campanhas do negócio de exemplo são fictícios e estão marcados como exemplo na interface.
-- Não existem ainda dados reais de vendas, depoimentos, avaliações ou fotos de produto. Não inventar.
+- Fotos de produto no Google Drive, pasta "Gestão brownies/brownies LOV/Melhores" (tradicional, textura, metade cookie, cobertura, embalados, kit com 4).
+- Planilha "Controle de Vendas de Brownies" no Drive: primeiras vendas a R$ 10 por unidade.
+- Um estudo prévio com valores e estimativas existe e será passado pela dona; até lá, preços além de R$ 10, custos e metas estão em aberto.
+- Não existem ainda depoimentos nem avaliações publicadas. Não inventar.
 
 ## Product Principles
 

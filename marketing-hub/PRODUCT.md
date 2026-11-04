@@ -48,8 +48,9 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 - Os números, posts e campanhas do negócio de exemplo são fictícios e estão marcados como exemplo na interface.
 - Fotos de produto no Google Drive, pasta "Gestão brownies/brownies LOV/Melhores" (tradicional, textura, metade cookie, cobertura, embalados, kit com 4).
 - Planilha "Controle de Vendas de Brownies" no Drive: primeiras vendas a R$ 10 por unidade.
-- Plano de negócios de 03/11/2026 (enviado pela dona, não versionado aqui): preços, custos, ponto de equilíbrio de 6 brownies por dia, oferta "Luv 80 g, Chegou Inteiro", posicionamento de presente pronto, calendário de lançamento (pré-venda em 21/11, lançamento em 28/11) e orçamento de marketing de R$ 200. Os números são projeções e o painel de compradores é simulado.
-- A primeira noite de vendas (03/11) teve zero vendas.
+- Plano de negócios de 03/11/2026 (enviado pela dona, não versionado aqui): preços, custos, ponto de equilíbrio de 6 brownies por dia, oferta "Luv 80 g, Chegou Inteiro", posicionamento de presente pronto, calendário de lançamento e orçamento de marketing de R$ 200. Os números são projeções e o painel de compradores é simulado.
+- O Instagram está no ar desde 30/10 e a loja abriu em 03/11 (zero vendas na primeira noite). Por decisão da dona, as ações de lançamento do plano, previstas para 21/11 e 28/11, foram adiantadas para começar em 04/11.
+- Instagram em 03/11: 40 seguidores, 2 posts, 599 contas alcançadas em 30 dias, 108 visitas ao perfil e 9 toques no link da bio.
 - Não existem ainda depoimentos nem avaliações publicadas. Não inventar.
 
 ## Product Principles

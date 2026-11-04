@@ -40,7 +40,7 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 - Nome: LUV Brownies. Instagram: @luv.browniess.
 - Identidade (artes no Canva: "LUV-posts-editavel", "Menu de sabores da LUV Brownies", "Post de apresentação da LUV Brownies"): vermelho #B5122F, creme #FFF1DC e marrom chocolate; mascote de um brownie que anda; letreiro "LUV" em letras grossas e arredondadas.
 - Voz: o LUV fala em primeira pessoa ("Prazer, eu sou o LUV"), com humor leve e frases curtas. Promessa: "Seu novo brownie favorito." Textura: "casquinha por fora, molhadinho por dentro". Chamada: "Peça pelo link na bio ou pelo direct."
-- Cardápio do plano (brownies de 80 g): Tradicional R$ 10, Red Velvet R$ 12, Brookie R$ 12, Nutella R$ 15, Dupla R$ 20 e Caixa Presente com 4 sabores e cartão escrito à mão R$ 45. As artes do Canva citam "Com Cobertura" no lugar da Nutella; qual fica no cardápio está em aberto.
+- Cardápio do plano (brownies de 80 g): Tradicional R$ 10, Red Velvet R$ 12, Brookie R$ 12, Nutella R$ 15, Dupla R$ 20 e Caixa Presente com 4 sabores e cartão escrito à mão R$ 45. O sabor Com Cobertura, que aparece nas artes do Canva, saiu do cardápio: fica a Nutella.
 - Decisões da dona: sem cupom, sem frete grátis e sem oferta de abertura. Garantia "Chegou Inteiro": foto em até 1 hora e devolução do valor do item por Pix.
 
 ## Evidence on Hand

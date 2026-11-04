@@ -22,7 +22,8 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 
 ## Operating Context
 
-- Canais de venda atuais: iFood, WhatsApp / pedido direto, site ou app próprio e outros marketplaces. A 99Food não é usada hoje; entrar nela é só uma possibilidade, sem data.
+- Cuiabá (MT). Produção na cozinha de casa, à noite (18h às 22h) e nos fins de semana, porque a dona tem outro emprego das 8h às 18h.
+- Canais de venda: iFood como vitrine (comissão de 23% mais 3,2% de pagamento online) e WhatsApp com o sistema Anota AI, com entrega pelo iFood ou retirada sem taxa. A meta do plano é levar a maior parte das vendas para o WhatsApp e a retirada. A 99Food não é usada hoje; entrar nela é só uma possibilidade, sem data.
 - Divulgação no Instagram e anúncios no Meta Ads; relacionamento por WhatsApp (conversa e lista de transmissão).
 - Os números vêm dos painéis de cada canal e são lançados à mão uma vez por semana. Não há integração automática.
 - Datas comemorativas (Páscoa, Dia dos Namorados, Dia do Chocolate, Black Friday, Natal) puxam campanhas e conteúdo.
@@ -39,14 +40,16 @@ Pensada para quem vende comida por delivery e paga comissão de marketplace: mos
 - Nome: LUV Brownies. Instagram: @luv.browniess.
 - Identidade (artes no Canva: "LUV-posts-editavel", "Menu de sabores da LUV Brownies", "Post de apresentação da LUV Brownies"): vermelho #B5122F, creme #FFF1DC e marrom chocolate; mascote de um brownie que anda; letreiro "LUV" em letras grossas e arredondadas.
 - Voz: o LUV fala em primeira pessoa ("Prazer, eu sou o LUV"), com humor leve e frases curtas. Promessa: "Seu novo brownie favorito." Textura: "casquinha por fora, molhadinho por dentro". Chamada: "Peça pelo link na bio ou pelo direct."
-- Cardápio de estreia: Tradicional, Brookie (metade brownie, metade cookie), Red Velvet e Com Cobertura, embalados um a um com o selo LUV; Caixa LUV com 4 brownies e 4 sabores para presente.
+- Cardápio do plano (brownies de 80 g): Tradicional R$ 10, Red Velvet R$ 12, Brookie R$ 12, Nutella R$ 15, Dupla R$ 20 e Caixa Presente com 4 sabores e cartão escrito à mão R$ 45. As artes do Canva citam "Com Cobertura" no lugar da Nutella; qual fica no cardápio está em aberto.
+- Decisões da dona: sem cupom, sem frete grátis e sem oferta de abertura. Garantia "Chegou Inteiro": foto em até 1 hora e devolução do valor do item por Pix.
 
 ## Evidence on Hand
 
 - Os números, posts e campanhas do negócio de exemplo são fictícios e estão marcados como exemplo na interface.
 - Fotos de produto no Google Drive, pasta "Gestão brownies/brownies LOV/Melhores" (tradicional, textura, metade cookie, cobertura, embalados, kit com 4).
 - Planilha "Controle de Vendas de Brownies" no Drive: primeiras vendas a R$ 10 por unidade.
-- Um estudo prévio com valores e estimativas existe e será passado pela dona; até lá, preços além de R$ 10, custos e metas estão em aberto.
+- Plano de negócios de 03/11/2026 (enviado pela dona, não versionado aqui): preços, custos, ponto de equilíbrio de 6 brownies por dia, oferta "Luv 80 g, Chegou Inteiro", posicionamento de presente pronto, calendário de lançamento (pré-venda em 21/11, lançamento em 28/11) e orçamento de marketing de R$ 200. Os números são projeções e o painel de compradores é simulado.
+- A primeira noite de vendas (03/11) teve zero vendas.
 - Não existem ainda depoimentos nem avaliações publicadas. Não inventar.
 
 ## Product Principles

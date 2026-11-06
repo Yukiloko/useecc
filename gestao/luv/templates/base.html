@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Gestão{% endblock %} · {{ empresa }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b5122f'/%3E%3Ctext x='16' y='21' font-family='Arial' font-weight='800' font-size='11' fill='white' text-anchor='middle'%3ELUV%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-painel" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-vendas" viewBox="0 0 24 24"><path d="M5 8h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 8Z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></symbol>
+  <symbol id="i-lanc" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8"/><circle cx="4" cy="12" r=".8"/><circle cx="4" cy="18" r=".8"/></symbol>
+  <symbol id="i-fluxo" viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></symbol>
+  <symbol id="i-dre" viewBox="0 0 24 24"><path d="M7 3.5h7l4.5 4.5v12a1 1 0 0 1-1 1h-10.5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"/><path d="M14 3.5V8h4.5M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-insumos" viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></symbol>
+  <symbol id="i-compras" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6"/><circle cx="9.5" cy="20" r="1.2"/><circle cx="17" cy="20" r="1.2"/></symbol>
+  <symbol id="i-producao" viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="14" rx="2.5"/><path d="M3.5 10h17M8 3v3M16 3v3"/><rect x="7.5" y="13" width="9" height="4" rx="1"/></symbol>
+  <symbol id="i-produtos" viewBox="0 0 24 24"><path d="M3.5 12.6V5a1.5 1.5 0 0 1 1.5-1.5h7.6l8 8a1.5 1.5 0 0 1 0 2.1l-7 7a1.5 1.5 0 0 1-2.1 0l-8-8Z"/><circle cx="8" cy="8" r="1.4"/></symbol>
+  <symbol id="i-config" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></symbol>
+  <symbol id="i-recorrente" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></symbol>
+  <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+{% set nav = [
+  ('Visão geral', [('painel.index', 'Painel', 'i-painel')]),
+  ('Financeiro', [
+    ('vendas.lista', 'Vendas', 'i-vendas'),
+    ('financeiro.lancamentos', 'Contas e lançamentos', 'i-lanc'),
+    ('financeiro.recorrentes', 'Despesas recorrentes', 'i-recorrente'),
+    ('financeiro.fluxo', 'Fluxo de caixa', 'i-fluxo'),
+    ('financeiro.dre', 'DRE', 'i-dre'),
+  ]),
+  ('Estoque', [
+    ('estoque.insumos', 'Insumos', 'i-insumos'),
+    ('estoque.compras', 'Compras', 'i-compras'),
+    ('estoque.producao', 'Produção', 'i-producao'),
+    ('estoque.produtos', 'Produtos e fichas', 'i-produtos'),
+  ]),
+  ('', [('config.index', 'Configurações', 'i-config')]),
+] %}
+{% set secao = endpoint.split('.')[0] %}
+{% set mapa_ativo = {
+  'financeiro.lancamento_novo': 'financeiro.lancamentos', 'financeiro.lancamento_editar': 'financeiro.lancamentos',
+  'financeiro.fluxo_anual': 'financeiro.fluxo', 'vendas.nova': 'vendas.lista',
+  'estoque.insumo_form': 'estoque.insumos', 'estoque.movimentos': 'estoque.insumos',
+  'estoque.compra_nova': 'estoque.compras', 'estoque.produto_form': 'estoque.produtos',
+} %}
+{% set ativo = mapa_ativo.get(endpoint, endpoint) %}
+
+<div class="app">
+  <aside class="sidebar">
+    <a class="marca" href="{{ url_for('painel.index') }}">
+      <span class="marca-logo">LUV</span>
+      <span><span class="marca-nome">{{ empresa }}</span><br><span class="marca-sub">Gestão</span></span>
+    </a>
+    <nav class="nav">
+      {% for titulo, itens in nav %}
+        {% if titulo %}<div class="nav-sec">{{ titulo }}</div>{% else %}<div class="nav-sec">&nbsp;</div>{% endif %}
+        {% for ep, rotulo, icone in itens %}
+          <a href="{{ url_for(ep) }}" class="{{ 'ativo' if ativo == ep }}" title="{{ rotulo }}">
+            <svg><use href="#{{ icone }}"/></svg><span>{{ rotulo }}</span>
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </nav>
+  </aside>
+
+  <main class="conteudo">
+    {% if modo_demo %}
+      <div class="aviso-demo"><b>Dados de exemplo.</b> Tudo aqui é fictício, para você explorar as telas. Seus dados reais ficam em outro banco.</div>
+    {% endif %}
+    {% block conteudo %}{% endblock %}
+  </main>
+</div>
+
+<div class="toasts" id="toasts">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="toast {{ cat }}" role="status">{{ msg }}</div>
+  {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

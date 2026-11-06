@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_macros.html" import vazio %}
+{% block titulo %}Compras{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Compras de insumos</h1>
+    <p class="sub">Cada compra entra no estoque, atualiza o custo médio e gera a saída no caixa.</p>
+  </div>
+  <div class="acoes"><a class="btn" href="{{ url_for('estoque.compra_nova') }}"><svg><use href="#i-mais"/></svg>Nova compra</a></div>
+</header>
+<div class="card flush">
+  {% if compras %}
+  <div class="tabela-wrap">
+  <table>
+    <thead><tr><th>Data</th><th>Itens</th><th class="num">Total</th><th>Pagamento</th><th></th></tr></thead>
+    <tbody>
+    {% for c in compras %}
+      <tr>
+        <td>{{ c.data|data_curta }}<span class="sub">{{ c.fornecedor or 'Sem fornecedor' }}</span></td>
+        <td>
+          {% for it in itens.get(c.id, []) %}{{ it.nome }} <span class="muted">{{ it.quantidade|qtd(it.unidade) }}</span>{{ ', ' if not loop.last }}{% endfor %}
+          {% if c.observacao %}<span class="sub">{{ c.observacao }}</span>{% endif %}
+        </td>
+        <td class="num">{{ c.total|brl }}</td>
+        <td>{% if c.pagamento %}<span class="pill pago">Pago</span>{% elif c.vencimento %}<span class="pill {{ 'atrasado' if c.vencimento < hoje_iso }}">Vence {{ c.vencimento|data_curta }}</span>{% endif %}</td>
+        <td class="acoes-linha">
+          <form method="post" action="{{ url_for('estoque.compra_excluir', cid=c.id) }}" data-confirmar="Excluir esta compra? O estoque e o caixa serão estornados.">
+            <button class="btn-x" title="Excluir">×</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    {{ vazio('Nenhuma compra registrada', 'Lance a nota do mercado ou do atacado: o estoque e o custo de cada insumo se atualizam sozinhos.', url_for('estoque.compra_nova'), 'Nova compra') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_macros.html" import vazio %}
+{% block titulo %}Produção{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Produção</h1>
+    <p class="sub">Registre cada fornada: os insumos da ficha técnica saem do estoque e os brownies entram, com o custo real do lote.</p>
+  </div>
+</header>
+
+<div class="grid g-2-1">
+  <div>
+    {% if faltas %}
+    <div class="alerta mb">
+      <b>Falta insumo para essa produção.</b>
+      <ul>{% for f in faltas %}<li>{{ f.nome }}: precisa {{ f.precisa }}, tem {{ f.tem }}</li>{% endfor %}</ul>
+      <p style="margin-top:8px">Registre a compra antes ou confirme abaixo para lançar mesmo assim (o estoque fica negativo).</p>
+    </div>
+    {% endif %}
+    <div class="card flush {{ 'mt' if faltas }}">
+      <div class="card-tit"><h2>Histórico</h2></div>
+      {% if historico %}
+      <table>
+        <thead><tr><th>Data</th><th>Produto</th><th class="num">Receitas</th><th class="num">Unidades</th><th class="num">Custo do lote</th><th class="num">Por unidade</th><th></th></tr></thead>
+        <tbody>
+        {% for h in historico %}
+          <tr>
+            <td>{{ h.data|data_curta }}</td>
+            <td>{{ h.nome }}{% if h.observacao %}<span class="sub">{{ h.observacao }}</span>{% endif %}</td>
+            <td class="num">{{ h.lotes|num(1) if h.lotes % 1 else h.lotes|num }}</td>
+            <td class="num">{{ h.quantidade|num }}</td>
+            <td class="num">{{ h.custo_total|round|int|brl }}</td>
+            <td class="num muted">{{ (h.custo_total / h.quantidade)|round|int|brl if h.quantidade else '—' }}</td>
+            <td class="acoes-linha">
+              <form method="post" action="{{ url_for('estoque.producao_excluir', pid=h.id) }}" data-confirmar="Excluir esta produção? Os insumos voltam ao estoque.">
+                <button class="btn-x" title="Excluir">×</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        {{ vazio('Nenhuma produção ainda', 'Monte a ficha técnica dos produtos e registre a primeira fornada ao lado.') }}
+      {% endif %}
+    </div>
+  </div>
+
+  <form class="card form" method="post" id="form-prod" style="align-self:start">
+    <h2>Nova produção</h2>
+    {% if produtos %}
+    <label class="campo"><span>Produto</span>
+      <select name="produto_id" id="produto" required>
+        {% for p in produtos %}<option value="{{ p.id }}" {{ 'selected' if (form.get('produto_id') or 0)|int == p.id }}>{{ p.nome }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="campos">
+      <label class="campo"><span>Receitas</span><input name="lotes" id="lotes" class="num" inputmode="decimal" value="{{ form.lotes or 1 }}" required><span class="dica" id="rende"></span></label>
+      <label class="campo"><span>Data</span><input type="date" name="data" value="{{ form.data or hoje_iso }}" required></label>
+    </div>
+    <div id="previa"></div>
+    <label class="campo"><span>Observação</span><input name="observacao" value="{{ form.observacao or '' }}" placeholder="Ex.: fornada de sexta"></label>
+    {% if faltas %}<input type="hidden" name="forcar" value="1">{% endif %}
+    <button class="btn" style="width:100%">{{ 'Registrar mesmo assim' if faltas else 'Registrar produção' }}</button>
+    {% else %}
+      <p class="muted">Cadastre um produto com ficha técnica em <a href="{{ url_for('estoque.produtos') }}">Produtos e fichas</a>.</p>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const FICHAS = {{ fichas_json|safe }};
+const sel = document.getElementById('produto');
+const lotes = document.getElementById('lotes');
+function previa() {
+  if (!sel) return;
+  const f = FICHAS[sel.value];
+  const n = Luv.numero(lotes.value) || 0;
+  const box = document.getElementById('previa');
+  if (!f || !f.itens.length) {
+    box.innerHTML = `<div class="alerta laranja">Este produto ainda não tem ficha técnica. <a href="/produtos/${sel.value}">Montar ficha</a></div>`;
+    document.getElementById('rende').textContent = '';
+    return;
+  }
+  document.getElementById('rende').textContent = `Rende ${(f.rendimento * n).toLocaleString('pt-BR')} unidades`;
+  let custo = 0;
+  const linhas = f.itens.map(i => {
+    const q = i.qtd * n; custo += q * i.custo;
+    const falta = q > i.estoque + 1e-9;
+    return `<li><span class="princ"><b>${i.nome}</b><small class="${falta ? 'neg' : 'muted'}">tem ${Luv.qtd(i.estoque, i.unidade)}</small></span><span class="num ${falta ? 'neg' : ''}">${Luv.qtd(q, i.unidade)}</span></li>`;
+  }).join('');
+  const un = f.rendimento * n;
+  box.innerHTML = `<ul class="lista" style="font-size:13px">${linhas}</ul>
+    <div class="resumo-lateral" style="position:static"><div class="linha total"><span>Custo estimado</span><span>${Luv.brl(custo)}</span></div>
+    <div class="linha"><span class="muted">Por unidade</span><span>${un ? Luv.brl(custo / un) : '—'}</span></div></div>`;
+}
+if (sel) { sel.addEventListener('change', previa); lotes.addEventListener('input', previa); previa(); }
+</script>
+{% endblock %}

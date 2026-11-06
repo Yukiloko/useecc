@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo, status_pill, vazio %}
+{% block titulo %}Contas e lançamentos{% endblock %}
+{% block conteudo %}
+{% set extra = {} %}
+{% for k in ['status', 'tipo', 'base', 'origem'] %}{% if f[k] %}{% set _ = extra.update({k: f[k]}) %}{% endif %}{% endfor %}
+{% if f.categoria %}{% set _ = extra.update({'categoria': f.categoria}) %}{% endif %}
+<header class="cabecalho">
+  <div>
+    <h1>Contas e lançamentos</h1>
+    <p class="sub">Contas a pagar e a receber, despesas e outras receitas.</p>
+  </div>
+  <div class="acoes">
+    {{ periodo(per, 'financeiro.lancamentos', extra) }}
+    <a class="btn sec" href="{{ url_for('financeiro.lancamentos_csv', mes=per.chave, **extra) }}">Exportar</a>
+    <a class="btn" href="{{ url_for('financeiro.lancamento_novo') }}"><svg><use href="#i-mais"/></svg>Lançamento</a>
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi"><span class="kpi-rot">Entradas</span><span class="kpi-val pos">{{ tot.entradas|brl }}</span><span class="kpi-rodape">A receber {{ tot.pendente_entrada|brl }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Saídas</span><span class="kpi-val">{{ tot.saidas|brl }}</span><span class="kpi-rodape">A pagar {{ tot.pendente_saida|brl }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Diferença</span><span class="kpi-val {{ 'neg' if tot.entradas < tot.saidas else '' }}">{{ (tot.entradas - tot.saidas)|brl }}</span><span class="kpi-rodape">Na lista filtrada</span></div>
+  <div class="card kpi"><span class="kpi-rot">Lançamentos</span><span class="kpi-val">{{ lancamentos|length }}</span>
+    <span class="kpi-rodape"><form method="post" action="{{ url_for('financeiro.recorrentes_gerar') }}" style="display:inline"><input type="hidden" name="mes" value="{{ per.chave }}"><button class="btn ghost pq" style="padding:0">Gerar recorrentes do mês</button></form></span></div>
+</section>
+
+<div class="card flush mt">
+  <form class="filtros" method="get" style="padding:18px 24px 0">
+    <input type="hidden" name="mes" value="{{ per.chave }}">
+    <div class="seg">
+      {% for v, r in [('', 'Todos'), ('pendente', 'Pendentes'), ('atrasado', 'Atrasados'), ('pago', 'Pagos')] %}
+        <a class="{{ 'on' if f.status == v }}" href="{{ url_for('financeiro.lancamentos', mes=per.chave, status=v, tipo=f.tipo, base=f.base, categoria=f.categoria, origem=f.origem) }}">{{ r }}</a>
+      {% endfor %}
+    </div>
+    <select name="tipo" onchange="this.form.submit()">
+      <option value="">Entradas e saídas</option>
+      <option value="entrada" {{ 'selected' if f.tipo == 'entrada' }}>Só entradas</option>
+      <option value="saida" {{ 'selected' if f.tipo == 'saida' }}>Só saídas</option>
+    </select>
+    <select name="origem" onchange="this.form.submit()">
+      <option value="">Com repasses de vendas</option>
+      <option value="outros" {{ 'selected' if f.origem == 'outros' }}>Sem repasses de vendas</option>
+      <option value="venda" {{ 'selected' if f.origem == 'venda' }}>Só repasses de vendas</option>
+    </select>
+    <select name="categoria" onchange="this.form.submit()">
+      <option value="">Todas as categorias</option>
+      {% for g, cats in categorias.items() if cats %}
+        <optgroup label="{{ grupos[g][0] }}">{% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if f.categoria == c.id }}>{{ c.nome }}</option>{% endfor %}</optgroup>
+      {% endfor %}
+    </select>
+    <select name="base" onchange="this.form.submit()" title="Qual data define o mês">
+      <option value="vencimento" {{ 'selected' if f.base == 'vencimento' }}>Pelo vencimento</option>
+      <option value="competencia" {{ 'selected' if f.base == 'competencia' }}>Pela competência</option>
+      <option value="pagamento" {{ 'selected' if f.base == 'pagamento' }}>Pelo pagamento</option>
+    </select>
+    <input type="hidden" name="status" value="{{ f.status }}">
+  </form>
+  {% if lancamentos %}
+  {% set pendentes = lancamentos|rejectattr('pagamento')|list %}
+  {% if pendentes %}
+  <form id="lote" method="post" action="{{ url_for('financeiro.lancamentos_baixa') }}" class="filtros hidden" style="padding:0 24px;margin:0 0 6px">
+    <span class="muted" style="font-size:13px"><b id="lote-n">0</b> selecionado(s) · <b id="lote-v">R$ 0,00</b></span>
+    <input type="date" name="pagamento" value="{{ hoje_iso }}" style="width:auto;height:32px;font-size:13px">
+    <button class="btn pq">Dar baixa</button>
+  </form>
+  {% endif %}
+  <div class="tabela-wrap">
+    <table>
+      <thead><tr>{% if pendentes %}<th style="width:1%;padding-right:0"><input type="checkbox" id="lote-todos" class="check" title="Selecionar pendentes" style="accent-color:var(--accent)"></th>{% endif %}<th>Vencimento</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for l in lancamentos %}
+        {% set st = status(l) %}
+        <tr>
+          {% if pendentes %}<td style="padding-right:0">{% if not l.pagamento %}<input type="checkbox" form="lote" name="ids" value="{{ l.id }}" data-valor="{{ l.valor if l.tipo == 'entrada' else -l.valor }}" class="lote-chk" style="accent-color:var(--accent)">{% endif %}</td>{% endif %}
+          <td>{{ l.vencimento|data_curta }}{% if l.pagamento and l.pagamento != l.vencimento %}<span class="sub">pago {{ l.pagamento|data_curta }}</span>{% endif %}</td>
+          <td><a href="{{ url_for('financeiro.lancamento_editar', lid=l.id) }}" style="color:inherit">{{ l.descricao }}</a>
+            <span class="sub">{{ l.conta or 'Sem conta' }}{% if l.origem == 'recorrente' %} · recorrente{% elif l.origem in ('venda', 'compra') %} · automático{% endif %}</span></td>
+          <td><span class="muted">{{ l.categoria }}</span><span class="sub">{{ grupos[l.grupo][0] }}</span></td>
+          <td class="num {{ 'pos' if l.tipo == 'entrada' }}">{{ '+' if l.tipo == 'entrada' else '−' }}{{ l.valor|brl }}</td>
+          <td>{{ status_pill(st) }}</td>
+          <td class="acoes-linha">
+            <form method="post" action="{{ url_for('financeiro.lancamento_pagar', lid=l.id) }}">
+              {% if st == 'pago' %}<button class="btn ghost pq" title="Voltar para pendente">Desfazer</button>
+              {% else %}<button class="btn sec pq">{{ 'Receber' if l.tipo == 'entrada' else 'Pagar' }}</button>{% endif %}
+            </form>
+            {% if l.origem not in ('venda', 'compra') %}
+            <form method="post" action="{{ url_for('financeiro.lancamento_excluir', lid=l.id) }}" data-confirmar="Excluir este lançamento?">
+              <button class="btn-x" title="Excluir">×</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ vazio('Nada por aqui', 'Nenhum lançamento com esses filtros em ' ~ per.nome ~ '.', url_for('financeiro.lancamento_novo'), 'Novo lançamento') }}
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const chks = [...document.querySelectorAll('.lote-chk')];
+const lote = document.getElementById('lote');
+function syncLote() {
+  const sel = chks.filter(c => c.checked);
+  lote.classList.toggle('hidden', !sel.length);
+  document.getElementById('lote-n').textContent = sel.length;
+  document.getElementById('lote-v').textContent = Luv.brl(sel.reduce((t, c) => t + Number(c.dataset.valor), 0));
+}
+chks.forEach(c => c.addEventListener('change', syncLote));
+const todos = document.getElementById('lote-todos');
+if (todos) todos.addEventListener('change', () => { chks.forEach(c => c.checked = todos.checked); syncLote(); });
+</script>
+{% endblock %}

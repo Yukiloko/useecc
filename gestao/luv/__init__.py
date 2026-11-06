@@ -11,23 +11,30 @@ RAIZ = Path(__file__).resolve().parent.parent
 DADOS = RAIZ / "dados"
 
 
-def _chave_secreta():
-    """Chave das sessões: variável de ambiente ou um arquivo gerado na primeira execução."""
+def _chave_secreta(conn):
+    """Chave das sessões: variável de ambiente ou gerada uma vez e guardada no banco."""
     if os.environ.get("LUV_SECRET"):
         return os.environ["LUV_SECRET"]
-    arq = DADOS / "chave-secreta.txt"
-    if not arq.exists():
-        arq.write_text(secrets.token_hex(32), encoding="utf-8")
-    return arq.read_text(encoding="utf-8").strip()
+    # quem gravar primeiro vence; os outros processos leem a mesma chave
+    conn.execute("INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO NOTHING",
+                 ("chave_secreta", secrets.token_hex(32)))
+    conn.commit()
+    return db.get_config(conn, "chave_secreta")
+
+
+def _banco_padrao(demo):
+    """Postgres se houver URL (Vercel + Supabase); senão SQLite em gestao/dados/."""
+    url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+    if url and not demo:
+        return url
+    DADOS.mkdir(exist_ok=True)
+    return str(DADOS / ("demo.db" if demo else "luv.db"))
 
 
 def create_app(database=None, demo=False, testing=False, senha=None):
     app = Flask(__name__)
-    DADOS.mkdir(exist_ok=True)
-    padrao = DADOS / ("demo.db" if demo else "luv.db")
     app.config.update(
-        DATABASE=str(database or os.environ.get("LUV_DB") or padrao),
-        SECRET_KEY=_chave_secreta(),
+        DATABASE=str(database or os.environ.get("LUV_DB") or _banco_padrao(demo)),
         SENHA=senha if senha is not None else os.environ.get("LUV_SENHA", ""),
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_HTTPONLY=True,
@@ -37,12 +44,13 @@ def create_app(database=None, demo=False, testing=False, senha=None):
     )
 
     conn = db.connect(app.config["DATABASE"])
-    db.init_schema(conn)
+    db.init_schema(conn, commit=False)   # no Postgres, segura a trava até o commit abaixo
     novo = not db.get_config(conn, "inicializado")
+    seed.base(conn, commit=False)
+    conn.commit()
     if demo and novo:
         seed.demo(conn)
-    else:
-        seed.base(conn)
+    app.config["SECRET_KEY"] = _chave_secreta(conn)
     conn.close()
 
     app.teardown_appcontext(db.close_db)

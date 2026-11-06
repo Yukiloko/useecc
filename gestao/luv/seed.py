@@ -41,7 +41,7 @@ CARDAPIO = [
 ]
 
 
-def base(conn, empresa="LUV Brownies"):
+def base(conn, empresa="LUV Brownies", commit=True):
     if get_config(conn, "inicializado"):
         return
     set_config(conn, "empresa", empresa)
@@ -67,7 +67,8 @@ def base(conn, empresa="LUV Brownies"):
             (nome, preco, 1, kit),
         )
     set_config(conn, "inicializado", "1")
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 # ---------------------------------------------------------------- demonstração

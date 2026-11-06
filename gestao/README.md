@@ -1,6 +1,6 @@
 # LUV · Gestão
 
-Ferramenta de gestão da LUV Brownies, em Python. Roda no seu computador e guarda tudo num arquivo SQLite.
+Ferramenta de gestão da LUV Brownies, em Python. No computador, guarda tudo num arquivo SQLite. Online, usa o Postgres do Supabase e pede senha: veja [PUBLICAR.md](PUBLICAR.md).
 
 ![Painel](docs/painel.png)
 
@@ -79,12 +79,16 @@ luv/templates/             HTML (Jinja)
 luv/static/                CSS e JS, sem dependências externas
 luv/charts.py              gráficos em SVG gerados no servidor
 luv/seed.py                estrutura inicial e dados de exemplo
+luv/db.py                  SQLite ou Postgres com a mesma interface
+wsgi.py, api/, render.yaml entrada para hospedagem
 tests/                     pytest
 ```
 
-Testes:
+Testes (no SQLite; com `LUV_TEST_PG=postgresql://...` rodam também no Postgres):
 
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
+
+Variáveis de ambiente: `DATABASE_URL` (Postgres; sem ela usa SQLite), `LUV_SENHA` (liga o login), `LUV_FUSO` (padrão `America/Cuiaba`).

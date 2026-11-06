@@ -1,5 +1,6 @@
 """Testes das regras que decidem os números: custo médio, CMV, caixa e DRE."""
 
+import os
 from datetime import date, timedelta
 
 import pytest
@@ -9,9 +10,26 @@ from luv.fmt import brl, hoje, ler_dinheiro, ler_numero, qtd
 from luv.services import estoque, financeiro, vendas
 
 
+PG = os.environ.get("LUV_TEST_PG")  # ex.: postgresql://luv@localhost:5433/luvtest
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+def alvo(request, tmp_path):
+    """Cada teste roda no SQLite e, se LUV_TEST_PG estiver definida, também no Postgres."""
+    if request.param == "sqlite":
+        return str(tmp_path / "t.db")
+    if not PG:
+        pytest.skip("defina LUV_TEST_PG para testar no Postgres")
+    import psycopg
+    with psycopg.connect(PG, autocommit=True) as c:
+        c.execute("DROP SCHEMA public CASCADE")
+        c.execute("CREATE SCHEMA public")
+    return PG
+
+
 @pytest.fixture
-def conn(tmp_path):
-    c = db.connect(tmp_path / "t.db")
+def conn(alvo):
+    c = db.connect(alvo)
     db.init_schema(c)
     seed.base(c)
     yield c
@@ -247,8 +265,8 @@ def test_recorrencias_nao_duplicam(conn):
 
 # ---------------------------------------------------------------- telas
 
-def test_todas_as_telas_abrem_com_dados_de_exemplo(tmp_path):
-    app = create_app(database=tmp_path / "demo.db", demo=True, testing=True)
+def test_todas_as_telas_abrem_com_dados_de_exemplo(alvo):
+    app = create_app(database=alvo, demo=True, testing=True)
     c = app.test_client()
     for url in ["/", "/vendas/", "/vendas/nova", "/lancamentos", "/lancamentos/novo", "/recorrentes",
                 "/fluxo", "/fluxo/anual", "/dre", "/dre?visao=ano", "/dre.csv", "/lancamentos.csv",
@@ -258,8 +276,8 @@ def test_todas_as_telas_abrem_com_dados_de_exemplo(tmp_path):
         assert c.get(url).status_code == 200, url
 
 
-def test_fluxo_de_venda_pelo_formulario(tmp_path):
-    app = create_app(database=tmp_path / "t.db", testing=True)
+def test_fluxo_de_venda_pelo_formulario(alvo):
+    app = create_app(database=alvo, testing=True)
     c = app.test_client()
     r = c.post("/vendas/nova", data={
         "data": D(), "canal_id": "2", "item_produto": ["1"], "item_qtd": ["3"], "item_preco": ["10,00"],
@@ -278,8 +296,8 @@ def test_fluxo_de_venda_pelo_formulario(tmp_path):
 
 # ---------------------------------------------------------------- login
 
-def test_login_protege_tudo(tmp_path):
-    app = create_app(database=tmp_path / "t.db", testing=True, senha="brownie123")
+def test_login_protege_tudo(alvo):
+    app = create_app(database=alvo, testing=True, senha="brownie123")
     c = app.test_client()
     r = c.get("/dre")
     assert r.status_code == 302 and "/entrar" in r.headers["Location"]
@@ -292,12 +310,12 @@ def test_login_protege_tudo(tmp_path):
     assert c.get("/").status_code == 302
 
 
-def test_login_nao_redireciona_para_fora(tmp_path):
-    app = create_app(database=tmp_path / "t.db", testing=True, senha="x")
+def test_login_nao_redireciona_para_fora(alvo):
+    app = create_app(database=alvo, testing=True, senha="x")
     r = app.test_client().post("/entrar", data={"senha": "x", "proximo": "//site-malicioso.com"})
     assert r.headers["Location"] == "/"
 
 
-def test_sem_senha_fica_aberto_localmente(tmp_path):
-    app = create_app(database=tmp_path / "t.db", testing=True, senha="")
+def test_sem_senha_fica_aberto_localmente(alvo):
+    app = create_app(database=alvo, testing=True, senha="")
     assert app.test_client().get("/").status_code == 200

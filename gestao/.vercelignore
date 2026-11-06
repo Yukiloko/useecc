@@ -1,0 +1,6 @@
+tests/
+docs/
+dados/
+.venv/
+__pycache__/
+*.db

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo, periodo_ano, sinal, delta %}
+{% block titulo %}DRE{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>DRE</h1>
+    <p class="sub">Demonstração do resultado pelo regime de competência{% if visao == 'ano' %}, {{ per.ano }}{% else %}, {{ per.nome }}{% endif %}.</p>
+  </div>
+  <div class="acoes">
+    <div class="seg">
+      <a class="{{ 'on' if visao != 'ano' }}" href="{{ url_for('financeiro.dre') }}">Mês</a>
+      <a class="{{ 'on' if visao == 'ano' }}" href="{{ url_for('financeiro.dre', visao='ano', ano=per.ano) }}">Ano</a>
+    </div>
+    {% if visao == 'ano' %}{{ periodo_ano(per, 'financeiro.dre', {'visao': 'ano'}) }}{% else %}{{ periodo(per, 'financeiro.dre') }}{% endif %}
+    <a class="btn sec" href="{{ url_for('financeiro.dre_csv', ano=per.ano) }}">Exportar ano</a>
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi"><span class="kpi-rot">Receita bruta</span><span class="kpi-val">{{ ind.receita|brl }}</span><span class="kpi-rodape">{{ ind.pedidos }} pedidos · {{ ind.unidades|num }} brownies</span></div>
+  <div class="card kpi"><span class="kpi-rot">Margem de contribuição</span><span class="kpi-val">{{ ind.margem_contribuicao|pct }}</span><span class="kpi-rodape">Margem bruta {{ ind.margem_bruta|pct }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Lucro líquido</span>{% set ll = d.linha.lucro_liquido %}
+    <span class="kpi-val {{ sinal(ll.total if visao == 'ano' else ll.valores[-1]) }}">{{ (ll.total if visao == 'ano' else ll.valores[-1])|brl }}</span>
+    <span class="kpi-rodape">Margem líquida {{ ind.margem_liquida|pct }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Ponto de equilíbrio</span><span class="kpi-val">{{ ind.ponto_equilibrio|round|int|brl if ind.ponto_equilibrio else '—' }}</span>
+    <span class="kpi-rodape">{% if ind.pe_unidades_dia %}{{ ind.pe_unidades_dia|num(1) }} brownies por dia{% else %}Precisa de vendas e margem positiva{% endif %}</span></div>
+</section>
+
+{% if grafico %}
+<div class="card mt">
+  <div class="card-tit"><h2>Mês a mês</h2></div>
+  {{ grafico }}
+  <div class="legenda"><span><i style="background:var(--chart-neutral)"></i>Receita bruta</span><span><i style="background:var(--chart-2)"></i>Margem de contribuição</span><span><i style="background:var(--chart-1)"></i>Lucro líquido</span></div>
+</div>
+{% endif %}
+
+<div class="card flush mt">
+  <div class="tabela-wrap">
+  {% if visao == 'ano' %}
+    <table class="dre dre-ano">
+      <thead><tr><th></th>{% for c in d.colunas %}<th class="num">{{ c }}</th>{% endfor %}<th class="num">Total</th><th class="num">%</th></tr></thead>
+      <tbody>
+      {% set rb = d.linha.receita.total %}
+      {% for l in d.linhas %}
+        <tr class="{{ l.tipo }}">
+          <td>{% if l.itens %}<span class="toggle" data-toggle="{{ l.chave }}">{{ l.rotulo }}</span>{% else %}{{ l.rotulo }}{% endif %}</td>
+          {% for v in l.valores %}<td class="num {{ 'neg' if v < 0 and l.tipo != 'grupo' }}">{{ v|brl_curto if v else '—' }}</td>{% endfor %}
+          <td class="num {{ 'neg' if l.total < 0 and l.tipo != 'grupo' }}">{{ l.total|brl_curto }}</td>
+          <td class="num av">{{ (l.total / rb)|pct(0) if rb else '—' }}</td>
+        </tr>
+        {% for i in l.itens %}
+          <tr class="item hidden" data-grupo="{{ l.chave }}">
+            <td>{{ i.rotulo }}</td>
+            {% for v in i.valores %}<td class="num">{{ v|brl_curto if v else '—' }}</td>{% endfor %}
+            <td class="num">{{ i.total|brl_curto }}</td><td class="num av">{{ (i.total / rb)|pct(0) if rb else '—' }}</td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    {% set rb = d.linha.receita.valores[-1] %}
+    {% set rb_ant = d.linha.receita.valores[0] %}
+    <table class="dre">
+      <thead><tr><th></th><th class="num">{{ per.nome|capitalize }}</th><th class="num">% receita</th><th class="num">Mês anterior</th><th class="num">Variação</th></tr></thead>
+      <tbody>
+      {% for l in d.linhas %}
+        {% set atual = l.valores[-1] %}{% set ant = l.valores[0] %}
+        <tr class="{{ l.tipo }}">
+          <td>{% if l.itens %}<span class="toggle aberto" data-toggle="{{ l.chave }}">{{ l.rotulo }}</span>{% else %}{{ l.rotulo }}{% endif %}</td>
+          <td class="num {{ 'neg' if atual < 0 and l.tipo != 'grupo' }}">{{ atual|brl }}</td>
+          <td class="num av">{{ (atual / rb)|pct if rb else '—' }}</td>
+          <td class="num muted">{{ ant|brl }}</td>
+          {% set custo = l.tipo == 'grupo' and l.chave != 'receita' and atual <= 0 and ant <= 0 %}
+          <td class="num">{% if ant %}{% if custo %}{{ delta(((atual|abs) - (ant|abs)) / (ant|abs), inverter=true) }}{% else %}{{ delta((atual - ant) / (ant|abs)) }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% for i in l.itens %}
+          <tr class="item" data-grupo="{{ l.chave }}">
+            <td>{{ i.rotulo }}</td>
+            <td class="num">{{ i.valores[-1]|brl }}</td>
+            <td class="num av">{{ (i.valores[-1] / rb)|pct if rb else '—' }}</td>
+            <td class="num">{{ i.valores[0]|brl }}</td><td></td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  </div>
+</div>
+
+<section class="grid g2 mt">
+  <div class="card">
+    <h2 style="margin-bottom:12px">Como ler</h2>
+    <ul class="lista texto" style="font-size:13px">
+      <li><span><b>Custo dos produtos vendidos</b><small class="muted">Insumos e embalagens de cada brownie vendido, pelo custo médio, mais perdas de estoque. Compras de insumo não entram aqui: vão para o estoque.</small></span></li>
+      <li><span><b>Margem de contribuição</b><small class="muted">O que sobra de cada venda para pagar as despesas fixas, depois de insumos, comissões e taxas.</small></span></li>
+      <li><span><b>Ponto de equilíbrio</b><small class="muted">Despesas fixas ÷ margem de contribuição. É o faturamento que zera o lucro.</small></span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:12px">Indicadores</h2>
+    <ul class="lista">
+      <li><span class="muted">Ticket médio</span><b class="num">{{ ind.ticket_medio|round|int|brl if ind.ticket_medio else '—' }}</b></li>
+      <li><span class="muted">Brownies vendidos por dia</span><b class="num">{{ ind.unidades_dia|num(1) }}</b></li>
+      <li><span class="muted">Necessários para empatar</span><b class="num">{{ ind.pe_unidades_dia|num(1) if ind.pe_unidades_dia else '—' }}</b></li>
+      <li><span class="muted">Despesas fixas</span><b class="num">{{ ind.despesas_fixas|brl }}</b></li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo_ano, sinal %}
+{% block titulo %}Fluxo de caixa anual{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Fluxo de caixa</h1>
+    <p class="sub">Caixa realizado de {{ per.ano }}, mês a mês, separado por atividade.</p>
+  </div>
+  <div class="acoes">
+    <div class="seg"><a href="{{ url_for('financeiro.fluxo') }}">Diário</a><a class="on" href="{{ url_for('financeiro.fluxo_anual', ano=per.ano) }}">Anual</a></div>
+    {{ periodo_ano(per, 'financeiro.fluxo_anual') }}
+  </div>
+</header>
+
+<section class="grid g2">
+  <div class="card">
+    <div class="card-tit"><h2>Geração de caixa</h2><span class="muted">Total {{ f.total|brl }}</span></div>
+    {{ grafico }}
+  </div>
+  <div class="card">
+    <div class="card-tit"><h2>Saldo no fim de cada mês</h2></div>
+    {{ grafico_saldo }}
+  </div>
+</section>
+
+<div class="card flush mt">
+  <div class="tabela-wrap">
+  <table class="dre dre-ano">
+    <thead><tr><th></th>{% for c in f.colunas %}<th class="num">{{ c }}</th>{% endfor %}<th class="num">Total</th></tr></thead>
+    <tbody>
+      <tr class="subtotal"><td>Saldo inicial</td>{% for v in f.saldo_final %}<td class="num">{{ (v - f.geracao[loop.index0])|brl_curto }}</td>{% endfor %}<td class="num">{{ f.saldo_inicial|brl_curto }}</td></tr>
+      {% for b in f.blocos %}{% set bi = loop.index %}
+        <tr class="grupo"><td><span class="toggle aberto" data-toggle="b{{ bi }}">{{ b.rotulo }}</span></td>{% for v in b.valores %}<td class="num {{ 'neg' if v < 0 }}">{{ v|brl_curto if v else '—' }}</td>{% endfor %}<td class="num {{ 'neg' if b.total < 0 }}">{{ b.total|brl_curto }}</td></tr>
+        {% for i in b.itens %}
+          <tr class="item" data-grupo="b{{ bi }}"><td>{{ i.rotulo }}</td>{% for v in i.valores %}<td class="num">{{ v|brl_curto if v else '—' }}</td>{% endfor %}<td class="num">{{ i.total|brl_curto }}</td></tr>
+        {% endfor %}
+      {% endfor %}
+      <tr class="subtotal"><td>Geração de caixa</td>{% for v in f.geracao %}<td class="num {{ 'neg' if v < 0 }}">{{ v|brl_curto if v else '—' }}</td>{% endfor %}<td class="num {{ 'neg' if f.total < 0 }}">{{ f.total|brl_curto }}</td></tr>
+      <tr class="resultado"><td>Saldo final</td>{% for v in f.saldo_final %}<td class="num">{{ v|brl_curto }}</td>{% endfor %}<td class="num">{{ f.saldo_final[-1]|brl_curto }}</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+<p class="muted mt" style="font-size:13px">Valores em reais, arredondados. Passe o mouse nos gráficos para ver o valor exato.</p>
+{% endblock %}

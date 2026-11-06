@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_pill, vazio %}
+{% block titulo %}Insumos{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Insumos</h1>
+    <p class="sub">Ingredientes e embalagens, com saldo e custo médio atualizados a cada compra e produção.</p>
+  </div>
+  <div class="acoes">
+    <a class="btn sec" href="{{ url_for('estoque.movimentos') }}">Movimentações</a>
+    <a class="btn sec" href="{{ url_for('estoque.insumo_form') }}">Novo insumo</a>
+    <a class="btn" href="{{ url_for('estoque.compra_nova') }}"><svg><use href="#i-mais"/></svg>Compra</a>
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi"><span class="kpi-rot">Valor em insumos</span><span class="kpi-val">{{ resumo.valor|round|int|brl }}</span><span class="kpi-rodape">{{ resumo.itens }} itens</span></div>
+  <div class="card kpi"><span class="kpi-rot">Valor em produtos prontos</span><span class="kpi-val">{{ resumo.valor_produtos|round|int|brl }}</span><span class="kpi-rodape">Pelo custo de produção</span></div>
+  <div class="card kpi"><span class="kpi-rot">Abaixo do mínimo</span><span class="kpi-val {{ 'neg' if resumo.alerta }}">{{ resumo.alerta }}</span><span class="kpi-rodape">{% if compras %}<a href="{{ url_for('estoque.compra_nova', sugestao=1) }}">Montar lista de compras</a>{% else %}Tudo em ordem{% endif %}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Compra sugerida</span><span class="kpi-val md">{{ (compras|sum(attribute='custo_estimado'))|round|int|brl }}</span><span class="kpi-rodape">Para voltar a 2× o mínimo</span></div>
+</section>
+
+<div class="filtros mt">
+  <div class="seg">
+    <a class="{{ 'on' if not filtro }}" href="{{ url_for('estoque.insumos') }}">Todos</a>
+    <a class="{{ 'on' if filtro == 'alerta' }}" href="{{ url_for('estoque.insumos', filtro='alerta') }}">Em alerta</a>
+  </div>
+</div>
+
+{% if grupos %}
+  {% for cat, itens in grupos.items() %}
+  <div class="card flush {{ 'mt' if not loop.first }}">
+    <div class="card-tit"><h2>{{ nomes_cat.get(cat, cat) }}</h2><span class="muted">{{ itens|length }} itens</span></div>
+    <div class="tabela-wrap">
+    <table>
+      <thead><tr><th>Insumo</th><th class="num">Em estoque</th><th class="num">Mínimo</th><th class="num">Custo médio</th><th class="num">Valor</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for i in itens %}
+        <tr>
+          <td><a href="{{ url_for('estoque.insumo_form', iid=i.id) }}" style="color:inherit;font-weight:500">{{ i.nome }}</a>{% if i.fornecedor %}<span class="sub">{{ i.fornecedor }}</span>{% endif %}</td>
+          <td class="num">{{ i.estoque|qtd(i.unidade) }}</td>
+          <td class="num muted">{{ i.estoque_minimo|qtd(i.unidade) if i.estoque_minimo else '—' }}</td>
+          <td class="num">{{ i.custo_medio|custo_unidade(i.unidade) if i.custo_medio else '—' }}</td>
+          <td class="num">{{ i.valor|round|int|brl }}</td>
+          <td>{% if i.status != 'ok' %}{{ status_pill(i.status) }}{% endif %}</td>
+          <td class="acoes-linha">
+            <button class="btn ghost pq" data-abrir="dlg-ajuste" data-acao="{{ url_for('estoque.ajustar', item='insumo', item_id=i.id) }}"
+              data-set-nome="{{ i.nome }}" data-set-unidade="{{ i.unidade }}" data-set-atual="{{ i.estoque|qtd(i.unidade) }}">Ajustar</button>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    {% if filtro %}
+      {{ vazio('Nenhum insumo em alerta', 'Todos acima do estoque mínimo.') }}
+    {% else %}
+      {{ vazio('Cadastre seus insumos', 'Chocolate, manteiga, ovos, embalagens… Depois monte a ficha técnica de cada brownie.', url_for('estoque.insumo_form'), 'Novo insumo') }}
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if produtos %}
+<div class="card flush mt">
+  <div class="card-tit"><h2>Produtos prontos</h2><a href="{{ url_for('estoque.producao') }}">Registrar produção</a></div>
+  <table>
+    <thead><tr><th>Produto</th><th class="num">Em estoque</th><th class="num">Custo unitário</th><th></th></tr></thead>
+    <tbody>
+    {% for p in produtos %}
+      <tr>
+        <td>{{ p.nome }}</td>
+        <td class="num {{ 'neg' if p.estoque < 0 }}">{{ p.estoque|num }} un</td>
+        <td class="num">{{ p.custo_medio|round|int|brl if p.custo_medio else '—' }}</td>
+        <td class="acoes-linha"><button class="btn ghost pq" data-abrir="dlg-ajuste" data-acao="{{ url_for('estoque.ajustar', item='produto', item_id=p.id) }}"
+          data-set-nome="{{ p.nome }}" data-set-unidade="un" data-set-atual="{{ p.estoque|num }} un">Ajustar</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% if inativos %}<p class="muted mt" style="font-size:13px">{{ inativos }} insumo(s) arquivado(s) não aparecem na lista.</p>{% endif %}
+
+{% include "estoque/_dialog_ajuste.html" %}
+{% endblock %}

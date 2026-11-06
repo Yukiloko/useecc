@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_macros.html" import dinheiro %}
+{% block titulo %}{{ p.nome if p else 'Novo produto' }}{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>{{ p.nome if p else 'Novo produto' }}</h1>
+    <p class="sub">{% if p and p.sabores_por_kit %}Kit: na venda você escolhe os sabores, que saem do estoque de brownies prontos. A ficha abaixo é só a embalagem do kit.{% else %}A ficha técnica é a receita de um lote. O custo por unidade é o custo do lote dividido pelo rendimento.{% endif %}</p>
+  </div>
+  <div class="acoes">
+    {% if p and not p.sabores_por_kit %}<button class="btn sec" data-abrir="dlg-ajuste" data-acao="{{ url_for('estoque.ajustar', item='produto', item_id=p.id) }}" data-set-nome="{{ p.nome }}" data-set-unidade="un" data-set-atual="{{ p.estoque|num }} un">Ajustar estoque</button>{% endif %}
+    <a class="btn sec" href="{{ url_for('estoque.produtos') }}">Voltar</a>
+  </div>
+</header>
+
+<form class="grid g-2-1" method="post">
+  <div class="card form">
+    <div class="campos">
+      <label class="campo span-2"><span>Nome</span><input name="nome" value="{{ p.nome if p else '' }}" required></label>
+      {{ dinheiro('preco', p.preco if p else none, 'Preço de venda') }}
+    </div>
+    <div class="campos">
+      <label class="switch"><input type="checkbox" name="eh_kit" value="1" id="eh-kit" {{ 'checked' if p and p.sabores_por_kit }}><i></i><span>É um kit (Dupla, Caixa Presente)</span></label>
+    </div>
+    <div class="campos">
+      <label class="campo" id="campo-rend"><span>Rendimento da receita</span><div class="sufixo"><input name="rendimento" id="rendimento" class="num" inputmode="decimal" value="{{ p.rendimento|num if p else 12 }}"><i>un</i></div></label>
+      <label class="campo hidden" id="campo-kit"><span>Brownies no kit</span><div class="sufixo"><input name="sabores_por_kit" class="num" type="number" min="1" max="24" value="{{ p.sabores_por_kit if p and p.sabores_por_kit else 2 }}"><i>un</i></div></label>
+    </div>
+
+    <h3 class="mt" id="tit-ficha">Ficha técnica</h3>
+    {% if not insumos %}
+      <p class="muted">Cadastre os insumos em <a href="{{ url_for('estoque.insumo_form') }}">Insumos</a> para montar a ficha.</p>
+    {% endif %}
+    <div class="itens" id="ficha">
+      <div class="item-linha ficha-linha item-cab"><span>Insumo</span><span id="cab-qtd">Quantidade por receita</span><span class="so-desk num">Custo</span><span></span></div>
+    </div>
+    {% if insumos %}<button type="button" class="btn ghost" id="add-ficha" style="justify-self:start"><svg><use href="#i-mais"/></svg>Adicionar insumo</button>{% endif %}
+    {% if p %}<label class="check"><input type="checkbox" name="inativo" value="1" {{ 'checked' if not p.ativo }}> Arquivar produto (some da venda e da produção)</label>{% endif %}
+    <div class="rodape-form"><button class="btn">Salvar</button></div>
+  </div>
+
+  <aside>
+    <div class="card resumo-lateral">
+      <h2 style="margin-bottom:8px">Custo e margem</h2>
+      <div class="linha"><span class="muted" id="rot-lote">Custo da receita</span><span id="c-lote">—</span></div>
+      <div class="linha total"><span>Custo por unidade</span><span id="c-unit">—</span></div>
+      <div class="linha"><span class="muted">Margem bruta</span><span id="c-margem">—</span></div>
+      <div id="c-canais"></div>
+      {% if p and p.custo_medio and not p.sabores_por_kit %}
+        <p class="muted" style="font-size:13px;margin-top:10px">Custo médio real das últimas produções: <b>{{ p.custo_medio|round|int|brl }}</b> por unidade.</p>
+      {% endif %}
+      {% if p and p.sabores_por_kit %}
+        <p class="muted" style="font-size:13px;margin-top:10px">Inclui a média de custo dos sabores. Na venda, vale o custo real de cada sabor escolhido.</p>
+      {% endif %}
+    </div>
+  </aside>
+</form>
+
+<template id="tpl-ficha">
+  <div class="item-linha ficha-linha" data-item>
+    <select name="ficha_insumo" data-insumo><option value="">Escolha…</option>
+      {% for i in insumos %}<option value="{{ i.id }}">{{ i.nome }}</option>{% endfor %}
+    </select>
+    <div class="sufixo"><input name="ficha_qtd" class="num" inputmode="decimal" data-qtd><i data-un></i></div>
+    <span class="num so-desk muted" data-custo>—</span>
+    <button type="button" class="btn-x" data-remover title="Remover">×</button>
+  </div>
+</template>
+{% include "estoque/_dialog_ajuste.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const INSUMOS = Object.fromEntries({{ dados_json|safe }}.map(i => [i.id, i]));
+const CANAIS = {{ canais_json|safe }};
+const FICHA = {{ ficha|map(attribute='insumo_id')|list|tojson }};
+const QTDS = {{ ficha|map(attribute='quantidade')|list|tojson }};
+const KIT_EXTRA = {{ ((teorico - custo_lote) if p and p.sabores_por_kit else 0)|tojson }};
+const box = document.getElementById('ficha');
+const ehKit = document.getElementById('eh-kit');
+const $ = s => document.querySelector(s);
+
+function linha(id, q) {
+  const n = $('#tpl-ficha').content.firstElementChild.cloneNode(true);
+  box.appendChild(n);
+  const sel = n.querySelector('[data-insumo]');
+  if (id) sel.value = id;
+  if (q != null) n.querySelector('[data-qtd]').value = Number(q).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+  sel.addEventListener('change', calc);
+  n.querySelector('[data-qtd]').addEventListener('input', calc);
+  n.querySelector('[data-remover]').addEventListener('click', () => { n.remove(); calc(); });
+  return n;
+}
+function calc() {
+  const kit = ehKit.checked;
+  $('#campo-rend').classList.toggle('hidden', kit);
+  $('#campo-kit').classList.toggle('hidden', !kit);
+  $('#tit-ficha').textContent = kit ? 'Embalagem do kit' : 'Ficha técnica';
+  $('#cab-qtd').textContent = kit ? 'Quantidade por kit' : 'Quantidade por receita';
+  $('#rot-lote').textContent = kit ? 'Embalagem' : 'Custo da receita';
+  let lote = 0;
+  box.querySelectorAll('[data-item]').forEach(n => {
+    const i = INSUMOS[n.querySelector('[data-insumo]').value];
+    const q = Luv.numero(n.querySelector('[data-qtd]').value) || 0;
+    n.querySelector('[data-un]').textContent = i ? i.unidade : '';
+    const c = i ? i.custo * q : 0;
+    lote += c;
+    n.querySelector('[data-custo]').textContent = i && q ? Luv.brl(c) : '—';
+  });
+  const rend = kit ? 1 : (Luv.numero($('#rendimento').value) || 1);
+  const unit = lote / rend + (kit ? KIT_EXTRA : 0);
+  const preco = Luv.centavos(document.querySelector('[name=preco]').value) || 0;
+  $('#c-lote').textContent = Luv.brl(lote);
+  $('#c-unit').textContent = unit ? Luv.brl(unit) : '—';
+  $('#c-margem').textContent = preco && unit ? ((preco - unit) / preco * 100).toFixed(0) + '%' : '—';
+  $('#c-canais').innerHTML = CANAIS.map(c => {
+    const sobra = preco - preco * c.pct / 100 - c.fixa - unit;
+    return `<div class="linha"><span class="muted">Sobra no ${c.nome}</span><span class="${sobra < 0 ? 'neg' : ''}">${preco && unit ? Luv.brl(sobra) : '—'}</span></div>`;
+  }).join('');
+}
+FICHA.forEach((id, k) => linha(id, QTDS[k]));
+if (!FICHA.length && Object.keys(INSUMOS).length) linha();
+const add = document.getElementById('add-ficha');
+if (add) add.addEventListener('click', () => { linha().querySelector('select').focus(); });
+ehKit.addEventListener('change', calc);
+$('#rendimento').addEventListener('input', calc);
+document.querySelector('[name=preco]').addEventListener('input', calc);
+calc();
+</script>
+{% endblock %}

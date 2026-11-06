@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Produtos e fichas técnicas{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Produtos e fichas técnicas</h1>
+    <p class="sub">Custo de cada brownie pela receita e quanto sobra em cada canal depois da comissão.</p>
+  </div>
+  <div class="acoes"><a class="btn" href="{{ url_for('estoque.produto_form') }}"><svg><use href="#i-mais"/></svg>Novo produto</a></div>
+</header>
+
+<div class="card flush">
+  <div class="tabela-wrap">
+  <table>
+    <thead>
+      <tr><th>Produto</th><th class="num">Preço</th><th class="num">Custo</th><th class="num">Markup</th>
+        {% for c in canais %}<th class="num">Sobra no {{ c.nome }}</th>{% endfor %}<th class="num">Estoque</th></tr>
+    </thead>
+    <tbody>
+    {% for p in produtos %}
+      <tr class="{{ 'muted' if not p.ativo }}">
+        <td><a href="{{ url_for('estoque.produto_form', pid=p.id) }}" style="color:inherit;font-weight:500">{{ p.nome }}</a>
+          <span class="sub">{% if p.sabores_por_kit %}Kit com {{ p.sabores_por_kit }} sabores{% else %}Rende {{ p.rendimento|num }} por receita{% endif %}{% if not p.tem_ficha %} · <span class="neg">sem ficha técnica</span>{% endif %}{% if not p.ativo %} · arquivado{% endif %}</span></td>
+        <td class="num">{{ p.preco|brl }}</td>
+        <td class="num">{{ p.custo|round|int|brl if p.custo else '—' }}{% if p.custo_medio and p.teorico and not p.sabores_por_kit and ((p.custo_medio - p.teorico)|abs) / p.teorico > 0.05 %}<span class="sub">ficha hoje {{ p.teorico|round|int|brl }}</span>{% endif %}</td>
+        <td class="num">{{ p.markup|num(1) ~ '×' if p.markup else '—' }}</td>
+        {% for m in p.margens %}
+          <td class="num {{ 'neg' if m.lucro < 0 }}">{% if p.custo %}{{ m.lucro|round|int|brl }}<span class="sub">{{ m.pct|pct(0) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        {% endfor %}
+        <td class="num">{{ '—' if p.sabores_por_kit else (p.estoque|num ~ ' un') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+<p class="muted mt" style="font-size:13px">Custo: média real das produções; enquanto não há produção, o custo da ficha com o preço atual dos insumos. Sobra = preço − comissão e taxas do canal − custo.</p>
+{% endblock %}

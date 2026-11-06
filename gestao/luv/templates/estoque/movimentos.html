@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Movimentações{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Movimentações de estoque</h1>
+    <p class="sub">Tudo que entrou e saiu, de insumos e de produtos. Últimos 300 registros.</p>
+  </div>
+  <div class="acoes"><a class="btn sec" href="{{ url_for('estoque.insumos') }}">Voltar</a></div>
+</header>
+<div class="filtros">
+  <div class="seg">
+    <a class="{{ 'on' if not tipo }}" href="{{ url_for('estoque.movimentos') }}">Todas</a>
+    {% for t in ['compra', 'consumo', 'producao', 'venda', 'perda'] %}
+      <a class="{{ 'on' if tipo == t }}" href="{{ url_for('estoque.movimentos', tipo=t) }}">{{ rotulos[t] }}</a>
+    {% endfor %}
+  </div>
+</div>
+<div class="card flush">
+  <div class="tabela-wrap">
+  <table>
+    <thead><tr><th>Data</th><th>Item</th><th>Movimento</th><th class="num">Quantidade</th><th class="num">Custo unitário</th><th class="num">Valor</th></tr></thead>
+    <tbody>
+    {% for m in movs %}
+      {% set u = m.unidade or 'un' %}
+      <tr>
+        <td>{{ m.data|data_curta }}</td>
+        <td>{{ m.nome }}<span class="sub">{{ 'Insumo' if m.item == 'insumo' else 'Produto' }}</span></td>
+        <td>{{ rotulos.get(m.tipo, m.tipo) }}{% if m.observacao %}<span class="sub">{{ m.observacao }}</span>{% endif %}</td>
+        <td class="num {{ 'pos' if m.quantidade > 0 }}">{{ '+' if m.quantidade > 0 }}{{ m.quantidade|qtd(u) }}</td>
+        <td class="num muted">{{ m.custo_unitario|custo_unidade(u) if m.custo_unitario else '—' }}</td>
+        <td class="num">{{ (m.quantidade * m.custo_unitario)|round|int|brl }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted" style="text-align:center;padding:30px">Nenhuma movimentação ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

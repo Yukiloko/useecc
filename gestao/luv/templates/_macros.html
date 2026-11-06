@@ -1,0 +1,48 @@
+{% macro periodo(per, endpoint, extra={}) -%}
+  <div class="periodo">
+    <a href="{{ url_for(endpoint, mes=per.anterior, **extra) }}" aria-label="Mês anterior">‹</a>
+    <span>{{ per.nome }}</span>
+    <a href="{{ url_for(endpoint, mes=per.proximo, **extra) }}" aria-label="Próximo mês">›</a>
+  </div>
+{%- endmacro %}
+
+{% macro periodo_ano(per, endpoint, extra={}) -%}
+  <div class="periodo">
+    <a href="{{ url_for(endpoint, ano=per.anterior, **extra) }}" aria-label="Ano anterior">‹</a>
+    <span>{{ per.ano }}</span>
+    <a href="{{ url_for(endpoint, ano=per.proximo, **extra) }}" aria-label="Próximo ano">›</a>
+  </div>
+{%- endmacro %}
+
+{% macro delta(v, inverter=false) -%}
+  {%- if v is none -%}
+    <span class="delta neutro">novo</span>
+  {%- else -%}
+    {%- set bom = (v >= 0) != inverter -%}
+    <span class="delta {{ 'sobe' if bom else 'desce' }}">{{ '↑' if v >= 0 else '↓' }} {{ (v|abs)|pct(0) }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro sinal(v) -%}{{ 'pos' if v > 0 else ('neg' if v < 0 else '') }}{%- endmacro %}
+
+{% macro status_pill(st) -%}
+  {%- set nomes = {'pago': 'Pago', 'pendente': 'Pendente', 'atrasado': 'Atrasado', 'hoje': 'Vence hoje', 'ok': 'Ok', 'baixo': 'Baixo', 'zerado': 'Zerado'} -%}
+  <span class="pill {{ st }}">{{ nomes.get(st, st) }}</span>
+{%- endmacro %}
+
+{% macro vazio(titulo, texto, link=none, rotulo=none) -%}
+  <div class="vazio">
+    <b>{{ titulo }}</b>
+    <span>{{ texto }}</span>
+    {% if link %}<div><a class="btn" href="{{ link }}">{{ rotulo }}</a></div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro dinheiro(nome, valor=none, rotulo='Valor', dica=none, attrs='', texto=none) -%}
+  <label class="campo">
+    <span>{{ rotulo }}</span>
+    <div class="prefixo"><i>R$</i><input name="{{ nome }}" class="dinheiro" inputmode="decimal" placeholder="0,00"
+      value="{{ texto if texto is not none else ((valor / 100)|num(2) if valor is not none else '') }}" {{ attrs|safe }}></div>
+    {% if dica %}<span class="dica">{{ dica }}</span>{% endif %}
+  </label>
+{%- endmacro %}

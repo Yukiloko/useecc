@@ -65,6 +65,9 @@
         {% endfor %}
       {% endfor %}
     </nav>
+    {% if com_login %}
+    <form method="post" action="{{ url_for('auth.sair') }}" class="sair"><button class="btn ghost pq">Sair</button></form>
+    {% endif %}
   </aside>
 
   <main class="conteudo">

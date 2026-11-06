@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pytest
 
 from luv import create_app, db, seed
-from luv.fmt import brl, ler_dinheiro, ler_numero, qtd
+from luv.fmt import brl, hoje, ler_dinheiro, ler_numero, qtd
 from luv.services import estoque, financeiro, vendas
 
 
@@ -32,7 +32,7 @@ def canal(conn, nome):
     return conn.execute("SELECT * FROM canais WHERE nome LIKE ?", (nome + "%",)).fetchone()
 
 
-HOJE = date.today()
+HOJE = hoje()
 D = lambda dias=0: (HOJE + timedelta(days=dias)).isoformat()
 
 
@@ -274,3 +274,30 @@ def test_fluxo_de_venda_pelo_formulario(tmp_path):
         "descricao": "Gás", "valor": "110,00", "categoria_id": "5", "competencia": D(), "vencimento": D(), "pago": "1",
     })
     assert r.status_code == 302
+
+
+# ---------------------------------------------------------------- login
+
+def test_login_protege_tudo(tmp_path):
+    app = create_app(database=tmp_path / "t.db", testing=True, senha="brownie123")
+    c = app.test_client()
+    r = c.get("/dre")
+    assert r.status_code == 302 and "/entrar" in r.headers["Location"]
+    assert c.post("/vendas/nova", data={}).status_code == 302
+    assert c.post("/entrar", data={"senha": "errada"}).status_code == 200
+    r = c.post("/entrar", data={"senha": "brownie123", "proximo": "/dre"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/dre")
+    assert c.get("/dre").status_code == 200
+    c.post("/sair")
+    assert c.get("/").status_code == 302
+
+
+def test_login_nao_redireciona_para_fora(tmp_path):
+    app = create_app(database=tmp_path / "t.db", testing=True, senha="x")
+    r = app.test_client().post("/entrar", data={"senha": "x", "proximo": "//site-malicioso.com"})
+    assert r.headers["Location"] == "/"
+
+
+def test_sem_senha_fica_aberto_localmente(tmp_path):
+    app = create_app(database=tmp_path / "t.db", testing=True, senha="")
+    assert app.test_client().get("/").status_code == 200

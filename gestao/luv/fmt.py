@@ -1,8 +1,13 @@
 """Formatação e leitura de números no padrão brasileiro, e utilitários de data."""
 
 import calendar
+import os
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+# servidores na nuvem rodam em UTC; o dia do negócio é o de Cuiabá
+FUSO = ZoneInfo(os.environ.get("LUV_FUSO", "America/Cuiaba"))
 
 MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 MESES_LONGOS = [
@@ -122,7 +127,7 @@ def data_curta(iso):
 
 
 def hoje():
-    return date.today()
+    return datetime.now(FUSO).date()
 
 
 def mes_atual():

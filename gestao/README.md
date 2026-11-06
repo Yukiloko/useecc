@@ -15,7 +15,7 @@ python run.py --demo             # explore com dados fictícios
 python run.py                    # seus dados reais
 ```
 
-O navegador abre em http://127.0.0.1:5000. Os bancos ficam em `gestao/dados/`: `luv.db` (real) e `demo.db` (exemplo). Para fazer backup, copie `luv.db`. Para abrir no celular dentro da rede de casa: `python run.py --host 0.0.0.0` e acesse o IP do computador. Não há login, então não exponha na internet.
+O navegador abre em http://127.0.0.1:5000. Os bancos ficam em `gestao/dados/`: `luv.db` (real) e `demo.db` (exemplo). Para fazer backup, copie `luv.db`. Para abrir no celular dentro da rede de casa: `python run.py --host 0.0.0.0` e acesse o IP do computador. Rodando assim, no seu computador, não pede senha. Para usar pela internet, com senha, veja [PUBLICAR.md](PUBLICAR.md).
 
 ## O que tem
 

@@ -28,6 +28,8 @@ def main():
         (DADOS / "demo.db").unlink(missing_ok=True)
 
     app = create_app(demo=args.demo)
+    if args.host != "127.0.0.1" and not app.config["SENHA"]:
+        print("\n  Atenção: aberto na rede sem senha. Defina LUV_SENHA para exigir login.")
     url = f"http://127.0.0.1:{args.porta}"
     print(f"\n  LUV · Gestão {'(exemplo) ' if args.demo else ''}em {url}\n  Banco: {Path(app.config['DATABASE'])}\n")
     if not args.sem_navegador:

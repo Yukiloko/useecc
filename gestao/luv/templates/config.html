@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% from "_macros.html" import dinheiro %}
-{% block titulo %}Configurações{% endblock %}
+{% block titulo %}Configurações<dialog id="dlg-acertar">
+  <form method="post" class="form">
+    <div>
+      <h2 data-campo="nome">Acertar pelo banco</h2>
+      <p class="sub">Hoje a ferramenta mostra <b data-campo="atual"></b>. Informe quanto o banco mostra agora e o saldo inicial é recalculado para os dois baterem.</p>
+    </div>
+    <label class="campo"><span>Saldo no banco hoje</span>
+      <div class="prefixo"><i>R$</i><input name="saldo_real" class="dinheiro" inputmode="decimal" placeholder="0,00" required></div>
+      <span class="dica">Lance antes tudo o que já aconteceu e que você quer registrar (equipamentos, compras, vendas, aportes).</span>
+    </label>
+    <div class="rodape-form">
+      <button type="button" class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn">Acertar</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
 {% block conteudo %}
 <header class="cabecalho">
   <div>
@@ -17,25 +33,30 @@
   </form>
   <div class="card">
     <h2 style="margin-bottom:10px">Backup</h2>
-    <p class="muted" style="font-size:14px">Todos os dados ficam num único arquivo SQLite na pasta <code>gestao/dados/</code>. Copie esse arquivo para fazer backup. Você também pode exportar os <a href="{{ url_for('financeiro.lancamentos_csv') }}">lançamentos do mês</a> e a <a href="{{ url_for('financeiro.dre_csv') }}">DRE do ano</a> em CSV.</p>
+    <p class="muted" style="font-size:14px">No site, os dados ficam no Supabase: no painel dele, <b>Table Editor</b> › cada tabela › <b>Export to CSV</b>. No computador, ficam no arquivo <code>gestao/dados/luv.db</code>. Daqui você exporta os <a href="{{ url_for('financeiro.lancamentos_csv') }}">lançamentos do mês</a> e a <a href="{{ url_for('financeiro.dre_csv') }}">DRE do ano</a> em CSV.</p>
   </div>
 </div>
 
 <div class="card flush mt" id="contas">
   <div class="card-tit"><h2>Contas</h2><span class="muted">Onde o dinheiro fica: banco, Pix, dinheiro em espécie</span></div>
   <table>
-    <thead><tr><th>Conta</th><th class="num">Saldo inicial</th><th></th></tr></thead>
+    <thead><tr><th>Conta · saldo inicial</th><th class="num">Saldo hoje</th><th></th></tr></thead>
     <tbody>
     {% for c in contas %}
       <tr>
-        <td colspan="3" style="padding-top:6px;padding-bottom:6px">
-          <form method="post" action="{{ url_for('config.conta_salvar') }}" class="item-linha" style="grid-template-columns:minmax(0,2fr) 180px auto auto">
+        <td style="padding-top:6px;padding-bottom:6px">
+          <form method="post" action="{{ url_for('config.conta_salvar') }}" class="item-linha" style="grid-template-columns:minmax(0,2fr) 160px auto auto">
             <input type="hidden" name="id" value="{{ c.id }}">
             <input name="nome" value="{{ c.nome }}" aria-label="Nome">
             <div class="prefixo"><i>R$</i><input name="saldo_inicial" class="dinheiro" value="{{ (c.saldo_inicial / 100)|num(2) }}" aria-label="Saldo inicial"></div>
             <label class="check"><input type="checkbox" name="inativa" value="1" {{ 'checked' if not c.ativa }}> Arquivada</label>
             <button class="btn sec pq">Salvar</button>
           </form>
+        </td>
+        <td class="num"><b class="{{ 'neg' if c.saldo < 0 }}">{{ c.saldo|brl }}</b></td>
+        <td class="acoes-linha">
+          <button class="btn ghost pq" data-abrir="dlg-acertar" data-acao="{{ url_for('config.conta_acertar', cid=c.id) }}"
+            data-set-nome="{{ c.nome }}" data-set-atual="{{ c.saldo|brl }}">Acertar pelo banco</button>
         </td>
       </tr>
     {% endfor %}
@@ -123,4 +144,20 @@
     {% endfor %}
   </div>
 </div>
+<dialog id="dlg-acertar">
+  <form method="post" class="form">
+    <div>
+      <h2 data-campo="nome">Acertar pelo banco</h2>
+      <p class="sub">Hoje a ferramenta mostra <b data-campo="atual"></b>. Informe quanto o banco mostra agora e o saldo inicial é recalculado para os dois baterem.</p>
+    </div>
+    <label class="campo"><span>Saldo no banco hoje</span>
+      <div class="prefixo"><i>R$</i><input name="saldo_real" class="dinheiro" inputmode="decimal" placeholder="0,00" required></div>
+      <span class="dica">Lance antes tudo o que já aconteceu e que você quer registrar (equipamentos, compras, vendas, aportes).</span>
+    </label>
+    <div class="rodape-form">
+      <button type="button" class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn">Acertar</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}

@@ -371,3 +371,52 @@ def test_bolso_pelos_formularios(alvo):
     c.post(f"/lancamentos/{pid}/excluir")
     with app.app_context():
         assert db.get_db().execute("SELECT COUNT(*) FROM lancamentos").fetchone()[0] == 0
+
+
+# ---------------------------------------------------------------- parcelas e acerto de saldo
+
+def test_somar_meses_e_dividir():
+    assert financeiro.somar_meses("2026-12-05", 1) == "2027-01-05"
+    assert financeiro.somar_meses("2027-01-31", 1) == "2027-02-28"
+    assert financeiro.dividir(200000, 8) == [25000] * 8
+    assert financeiro.dividir(100, 3) == [34, 33, 33]
+
+
+def test_forno_parcelado_em_8x(conn):
+    cat = _cat(conn, "Equipamentos")
+    ids = financeiro.salvar_parcelado(conn, {"descricao": "Forno Progás", "valor": 200000, "categoria_id": cat,
+                                             "conta_id": 1, "competencia": "2026-11-03", "vencimento": "2026-12-05"}, 8)
+    rows = conn.execute("SELECT * FROM lancamentos ORDER BY vencimento").fetchall()
+    assert len(ids) == 8 and sum(r["valor"] for r in rows) == 200000
+    assert [r["vencimento"] for r in rows][:2] == ["2026-12-05", "2027-01-05"] and rows[-1]["vencimento"] == "2027-07-05"
+    assert rows[-1]["descricao"] == "Forno Progás · parcela 8/8"
+    assert all(r["pagamento"] is None and r["competencia"] == "2026-11-03" for r in rows)
+    with pytest.raises(ValueError):
+        financeiro.salvar_parcelado(conn, {"descricao": "X", "valor": 1000, "categoria_id": cat,
+                                           "competencia": D(), "vencimento": D()}, 1)
+
+
+def test_parcelado_pelo_formulario(alvo):
+    app = create_app(database=alvo, testing=True)
+    c = app.test_client()
+    with app.app_context():
+        cat = _cat(db.get_db(), "Equipamentos")
+    r = c.post("/lancamentos/novo", data={"descricao": "Forno", "valor": "2.000,00", "categoria_id": str(cat), "conta_id": "1",
+                                          "competencia": "2026-11-03", "vencimento": "2026-12-05",
+                                          "parcelar": "1", "parcelas": "8", "pago": "1", "bolso": "1"})
+    assert r.status_code == 302
+    with app.app_context():
+        conn = db.get_db()
+        assert conn.execute("SELECT COUNT(*), SUM(valor) FROM lancamentos WHERE pagamento IS NULL").fetchone()[:] in ([8, 200000], (8, 200000))
+        assert conn.execute("SELECT COUNT(*) FROM lancamentos WHERE origem = 'bolso'").fetchone()[0] == 0
+
+
+def test_acertar_saldo_pelo_banco(conn):
+    cat = _cat(conn, "Equipamentos")
+    financeiro.salvar_lancamento(conn, {"descricao": "Impressora", "valor": 8799, "categoria_id": cat, "conta_id": 1,
+                                        "competencia": D(-5), "vencimento": D(-5), "pagamento": D(-5)})
+    financeiro.salvar_lancamento(conn, {"descricao": "Parcela futura", "valor": 25000, "categoria_id": cat, "conta_id": 1,
+                                        "competencia": D(), "vencimento": D(20)})
+    novo = financeiro.acertar_saldo(conn, 1, 50000)
+    assert novo == 58799
+    assert financeiro.saldo_em(conn, D(), 1) == 50000

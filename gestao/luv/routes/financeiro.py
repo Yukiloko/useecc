@@ -134,6 +134,14 @@ def lancamento_novo():
     if request.method == "POST":
         try:
             dados = _ler_lancamento()
+            if request.form.get("parcelar") == "1":
+                n = inteiro("parcelas", 0) or 0
+                sf.salvar_parcelado(conn, {**dados, "pagamento": None}, n)
+                conn.commit()
+                ok(f"{n} parcelas criadas, a primeira vencendo em {dados['vencimento'][8:]}/{dados['vencimento'][5:7]}.")
+                if request.form.get("continuar"):
+                    return redirect(url_for("financeiro.lancamento_novo"))
+                return redirect(url_for("financeiro.lancamentos", mes=dados["vencimento"][:7]))
             lid = sf.salvar_lancamento(conn, dados)
             sf.sincronizar_bolso(conn, lid, dados["bolso"])
             conn.commit()

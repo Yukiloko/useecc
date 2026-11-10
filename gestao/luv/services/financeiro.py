@@ -94,6 +94,54 @@ def salvar_lancamento(conn, dados, lancamento_id=None):
     return cur.lastrowid
 
 
+def somar_meses(iso, n):
+    """Mesmo dia n meses depois; no fim do mês, cai no último dia (31/01 + 1 = 28/02)."""
+    d = date.fromisoformat(iso)
+    total = d.year * 12 + d.month - 1 + n
+    ano, mes = total // 12, total % 12 + 1
+    return date(ano, mes, min(d.day, calendar.monthrange(ano, mes)[1])).isoformat()
+
+
+def dividir(total, n):
+    """Divide centavos em n partes; a sobra vai para as primeiras (100 / 3 = 34, 33, 33)."""
+    base, sobra = divmod(total, n)
+    return [base + (1 if i < sobra else 0) for i in range(n)]
+
+
+def salvar_parcelado(conn, dados, parcelas):
+    """Cria uma conta por parcela, todas pendentes, mês a mês a partir do vencimento informado.
+
+    `dados["valor"]` é o valor total. A competência é a mesma em todas (a data da compra).
+    """
+    if not 2 <= parcelas <= 60:
+        raise ValueError("Informe de 2 a 60 parcelas.")
+    if dados["valor"] is None or dados["valor"] < parcelas:
+        raise ValueError("Informe o valor total da compra.")
+    ids = []
+    for i, valor in enumerate(dividir(dados["valor"], parcelas)):
+        ids.append(salvar_lancamento(conn, {
+            **dados,
+            "descricao": f"{dados['descricao']} · parcela {i + 1}/{parcelas}",
+            "valor": valor,
+            "vencimento": somar_meses(dados["vencimento"], i),
+            "pagamento": None,
+        }))
+    return ids
+
+
+def acertar_saldo(conn, conta_id, saldo_real, data_iso=None):
+    """Define o saldo inicial da conta para que o saldo do dia bata com o do banco.
+
+    saldo inicial = saldo real − (tudo que entrou − tudo que saiu, pago até a data).
+    """
+    data_iso = data_iso or hoje().isoformat()
+    atual = saldo_em(conn, data_iso, conta_id)
+    inicial = conn.execute("SELECT saldo_inicial FROM contas WHERE id = ?", (conta_id,)).fetchone()[0]
+    novo = saldo_real - (atual - inicial)
+    conn.execute("UPDATE contas SET saldo_inicial = ? WHERE id = ?", (novo, conta_id))
+    return novo
+
+
 # ---------------------------------------------------------------- pago do bolso
 
 def categoria_aporte(conn):

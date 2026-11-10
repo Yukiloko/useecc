@@ -1,6 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, url_for
 
 from ..db import get_db, set_config
+from ..fmt import brl, hoje
 from ..services import financeiro as sf
 from ._util import ErroFormulario, campo, dinheiro, erro, inteiro, numero, ok
 
@@ -10,7 +11,9 @@ bp = Blueprint("config", __name__, url_prefix="/configuracoes")
 @bp.route("/")
 def index():
     conn = get_db()
-    contas = conn.execute("SELECT * FROM contas ORDER BY ativa DESC, id").fetchall()
+    hoje_iso = hoje().isoformat()
+    contas = [{**dict(c), "saldo": sf.saldo_em(conn, hoje_iso, c["id"])}
+              for c in conn.execute("SELECT * FROM contas ORDER BY ativa DESC, id")]
     canais = conn.execute(
         "SELECT c.*, ct.nome AS conta FROM canais c LEFT JOIN contas ct ON ct.id = c.conta_id ORDER BY c.ativo DESC, c.id"
     ).fetchall()
@@ -49,6 +52,20 @@ def conta_salvar():
             conn.execute("INSERT INTO contas (nome, saldo_inicial) VALUES (?, ?)", (nome, saldo))
         conn.commit()
         ok("Conta salva.")
+    except ErroFormulario as e:
+        erro(e)
+    return redirect(url_for("config.index") + "#contas")
+
+
+@bp.route("/contas/<int:cid>/acertar", methods=["POST"])
+def conta_acertar(cid):
+    """Recalcula o saldo inicial para o saldo de hoje bater com o extrato do banco."""
+    conn = get_db()
+    try:
+        real = dinheiro("saldo_real", obrigatorio=True)
+        novo = sf.acertar_saldo(conn, cid, real)
+        conn.commit()
+        ok(f"Pronto: o saldo de hoje agora é {brl(real)} (saldo inicial ajustado para {brl(novo)}).")
     except ErroFormulario as e:
         erro(e)
     return redirect(url_for("config.index") + "#contas")

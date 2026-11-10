@@ -24,8 +24,23 @@
   </div>
   <div class="campos">
     <label class="campo span-2"><span>Descrição</span><input name="descricao" value="{{ v.descricao or '' }}" placeholder="Ex.: conta de luz de outubro" required autofocus></label>
-    {{ dinheiro('valor', lanc.valor if lanc else none, 'Valor', attrs='required', texto=request.form.valor) }}
+    <label class="campo">
+      <span id="rot-valor">Valor</span>
+      <div class="prefixo"><i>R$</i><input name="valor" id="valor" class="dinheiro" inputmode="decimal" placeholder="0,00" required
+        value="{{ request.form.valor if request.form else ((lanc.valor / 100)|num(2) if lanc else '') }}"></div>
+    </label>
   </div>
+  {% if not lanc %}
+  <div class="campos">
+    <div class="campo">
+      <label class="switch"><input type="checkbox" name="parcelar" value="1" id="parcelar" {{ 'checked' if request.form.parcelar }}><i></i><span>Parcelado</span></label>
+      <span class="dica" id="parc-dica">Cria uma conta a pagar por mês.</span>
+    </div>
+    <label class="campo hidden" id="campo-parcelas"><span>Número de parcelas</span>
+      <input name="parcelas" id="parcelas" type="number" min="2" max="60" value="{{ request.form.parcelas or 2 }}" class="num">
+    </label>
+  </div>
+  {% endif %}
   <div class="campos">
     <label class="campo span-2"><span>Categoria</span>
       <select name="categoria_id" id="categoria" required>
@@ -44,7 +59,7 @@
   </div>
   <div class="campos">
     <label class="campo"><span>Competência</span><input type="date" name="competencia" value="{{ v.competencia or hoje_iso }}" required><span class="dica">Mês em que entra na DRE.</span></label>
-    <label class="campo"><span>Vencimento</span><input type="date" name="vencimento" value="{{ v.vencimento or hoje_iso }}" required><span class="dica">Quando sai ou entra no caixa.</span></label>
+    <label class="campo"><span id="rot-venc">Vencimento</span><input type="date" name="vencimento" id="vencimento" value="{{ v.vencimento or hoje_iso }}" required><span class="dica" id="dica-venc">Quando sai ou entra no caixa.</span></label>
   </div>
   {% else %}
   <div class="campos">
@@ -57,7 +72,7 @@
   </div>
   {% endif %}
 
-  <div class="campos">
+  <div class="campos" id="bloco-pagamento">
     {% if not auto %}
     <div class="campo span-all" id="campo-bolso">
       <label class="switch"><input type="checkbox" name="bolso" value="1" id="bolso" {{ 'checked' if bolso }}><i></i><span>Paguei do meu bolso</span></label>
@@ -104,6 +119,40 @@ function syncPago() {
 pago.addEventListener('change', syncPago);
 if (bolso) bolso.addEventListener('change', syncPago);
 syncPago();
+
+// parcelamento: valor vira total, vencimento vira o da 1ª parcela, pagamento fica para depois
+const parcelar = document.getElementById('parcelar');
+if (parcelar) {
+  const nInput = document.getElementById('parcelas');
+  const dataBr = iso => iso.split('-').reverse().join('/');
+  const somaMeses = (iso, n) => {
+    const [a, m, d] = iso.split('-').map(Number);
+    const t = a * 12 + (m - 1) + n, ano = Math.floor(t / 12), mes = t % 12 + 1;
+    const ult = new Date(ano, mes, 0).getDate();
+    return `${ano}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`;
+  };
+  function syncParc() {
+    const on = parcelar.checked;
+    document.getElementById('campo-parcelas').classList.toggle('hidden', !on);
+    document.getElementById('bloco-pagamento').classList.toggle('hidden', on);
+    document.getElementById('rot-valor').textContent = on ? 'Valor total' : 'Valor';
+    document.getElementById('rot-venc').textContent = on ? 'Vencimento da 1ª parcela' : 'Vencimento';
+    document.getElementById('dica-venc').textContent = on ? 'As outras vencem no mesmo dia dos meses seguintes.' : 'Quando sai ou entra no caixa.';
+    const dica = document.getElementById('parc-dica');
+    const n = parseInt(nInput.value, 10);
+    const total = Luv.centavos(document.getElementById('valor').value);
+    const venc = document.getElementById('vencimento').value;
+    if (on && n >= 2 && total > 0 && venc) {
+      const parcela = Math.floor(total / n);
+      dica.textContent = `${n}× ${Luv.brl(parcela)}${total % n ? ' (com centavos na 1ª)' : ''} · de ${dataBr(venc)} a ${dataBr(somaMeses(venc, n - 1))}`;
+    } else {
+      dica.textContent = 'Cria uma conta a pagar por mês.';
+    }
+  }
+  [parcelar, nInput, document.getElementById('valor'), document.getElementById('vencimento')]
+    .forEach(el => { el.addEventListener('input', syncParc); el.addEventListener('change', syncParc); });
+  syncParc();
+}
 
 const seg = document.getElementById('seg-tipo');
 if (seg) {

@@ -47,6 +47,7 @@ def create_app(database=None, demo=False, testing=False, senha=None):
     db.init_schema(conn, commit=False)   # no Postgres, segura a trava até o commit abaixo
     novo = not db.get_config(conn, "inicializado")
     seed.base(conn, commit=False)
+    conn.execute("UPDATE movimentos SET tipo = 'inicial' WHERE tipo = 'ajuste_entrada' AND observacao = 'Estoque inicial'")
     conn.commit()
     if demo and novo:
         seed.demo(conn)

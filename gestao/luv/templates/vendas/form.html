@@ -48,6 +48,8 @@
       <p class="muted" id="r-receb" style="font-size:13px;margin:8px 0 14px"></p>
       <label class="switch" style="margin-bottom:16px"><input type="checkbox" id="recebido-chk"><i></i><span>Já recebido</span></label>
       <input type="hidden" name="recebido" id="recebido" value="">
+      <label class="switch" style="margin-bottom:6px"><input type="checkbox" name="sem_estoque" value="1" {{ 'checked' if request.form.sem_estoque }}><i></i><span>Venda antiga, não baixar estoque</span></label>
+      <p class="muted" style="font-size:12px;margin:0 0 16px">Para pedidos de antes de você contar o estoque. Entra na receita e no custo, mas não mexe no estoque.</p>
       <button class="btn" type="submit" style="width:100%">Registrar venda</button>
       <button class="btn sec mt" type="submit" name="continuar" value="1" style="width:100%">Registrar e lançar outra</button>
     </div>

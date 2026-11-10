@@ -420,3 +420,53 @@ def test_acertar_saldo_pelo_banco(conn):
     novo = financeiro.acertar_saldo(conn, 1, 50000)
     assert novo == 58799
     assert financeiro.saldo_em(conn, D(), 1) == 50000
+
+
+# ---------------------------------------------------------------- data de corte
+
+def test_estoque_inicial_nao_entra_na_dre(conn):
+    choc = insumo(conn, "Chocolate")
+    estoque.ajustar(conn, D(), "insumo", choc, "inicial", 1500, custo=6.0)
+    r = conn.execute("SELECT estoque, custo_medio FROM insumos WHERE id = ?", (choc,)).fetchone()
+    assert r["estoque"] == 1500 and r["custo_medio"] == pytest.approx(6.0)
+    d = financeiro.dre_mes(conn, HOJE.year, HOJE.month)
+    assert d["linha"]["custo"]["total"] == 0 and d["linha"]["lucro_liquido"]["total"] == 0
+
+
+def test_brownie_pronto_no_estoque_inicial_usa_custo_da_ficha(conn):
+    pid, *_ = _brownie_com_ficha(conn)          # ficha dá R$ 2,30 por brownie
+    estoque.ajustar(conn, D(), "produto", pid, "inicial", 12)
+    p = conn.execute("SELECT estoque, custo_medio FROM produtos WHERE id = ?", (pid,)).fetchone()
+    assert p["estoque"] == 12 and p["custo_medio"] == pytest.approx(230)
+    assert financeiro.dre_mes(conn, HOJE.year, HOJE.month)["linha"]["custo"]["total"] == 0
+
+
+def test_venda_antiga_nao_baixa_estoque(conn):
+    pid, *_ = _brownie_com_ficha(conn)
+    estoque.ajustar(conn, D(), "produto", pid, "inicial", 5)
+    ifood = canal(conn, "iFood")
+    vid = vendas.registrar_venda(conn, D(-3), ifood["id"], [{"produto_id": pid, "quantidade": 2}], baixar_estoque=False)
+    v = conn.execute("SELECT * FROM vendas WHERE id = ?", (vid,)).fetchone()
+    assert v["cmv"] == 460 and v["bruto"] == 2000 and "anterior" in v["observacao"]
+    assert conn.execute("SELECT estoque FROM produtos WHERE id = ?", (pid,)).fetchone()[0] == 5
+    # o repasse do iFood fica a receber normalmente
+    l = conn.execute("SELECT * FROM lancamentos WHERE origem = 'venda'").fetchone()
+    assert l["pagamento"] is None and l["vencimento"] == D(27)
+    vendas.excluir_venda(conn, vid)
+    assert conn.execute("SELECT estoque FROM produtos WHERE id = ?", (pid,)).fetchone()[0] == 5
+
+
+def test_estoque_inicial_antigo_sai_da_dre(alvo):
+    # versões anteriores gravavam o estoque inicial como ajuste, que aparecia como ganho na DRE
+    c = db.connect(alvo)
+    db.init_schema(c)
+    seed.base(c)
+    choc = insumo(c, "Chocolate")
+    estoque.movimentar(c, D(), "insumo", choc, "ajuste_entrada", 1000, 6.0, "ajuste", None, "Estoque inicial")
+    c.commit()
+    c.close()
+    app = create_app(database=alvo, testing=True)
+    with app.app_context():
+        conn = db.get_db()
+        assert conn.execute("SELECT tipo FROM movimentos").fetchone()[0] == "inicial"
+        assert financeiro.dre_mes(conn, HOJE.year, HOJE.month)["linha"]["custo"]["total"] == 0

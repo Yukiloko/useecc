@@ -11,7 +11,9 @@ from dataclasses import dataclass
 from ..fmt import qtd
 from .financeiro import categoria_sistema, registrar_aporte
 
-TIPOS_ENTRADA = {"compra", "producao", "ajuste_entrada", "estorno"}
+# "inicial" é o estoque contado na data de corte: muda saldo e custo médio, mas não é
+# ganho nem perda, então fica fora da DRE (ao contrário de perda e ajustes de contagem).
+TIPOS_ENTRADA = {"compra", "producao", "ajuste_entrada", "estorno", "inicial"}
 ROTULOS_MOV = {
     "compra": "Compra",
     "producao": "Produção",
@@ -20,6 +22,7 @@ ROTULOS_MOV = {
     "perda": "Perda",
     "ajuste_entrada": "Ajuste (+)",
     "ajuste_saida": "Ajuste (−)",
+    "inicial": "Estoque inicial",
 }
 
 
@@ -265,8 +268,13 @@ def excluir_producao(conn, producao_id):
 
 # ---------------------------------------------------------------- ajustes e perdas
 
-def ajustar(conn, data, item, item_id, tipo, quantidade, observacao=None):
-    """tipo: 'perda' (sai), 'contagem' (define o saldo contado) ou 'entrada' (soma)."""
+def ajustar(conn, data, item, item_id, tipo, quantidade, observacao=None, custo=None):
+    """tipo: 'perda' (sai), 'contagem' (define o saldo contado), 'entrada' (soma) ou
+    'inicial' (define o saldo na data de corte, sem passar pela DRE).
+
+    custo: centavos por unidade-base, usado no estoque inicial. Sem ele, vale o custo
+    médio atual ou, para produtos ainda não produzidos, o custo da ficha técnica.
+    """
     tabela = _tabela(item)
     atual = conn.execute(f"SELECT estoque, custo_medio FROM {tabela} WHERE id = ?", (item_id,)).fetchone()
     if atual is None:
@@ -281,6 +289,17 @@ def ajustar(conn, data, item, item_id, tipo, quantidade, observacao=None):
             return
         movimentar(conn, data, item, item_id, "ajuste_entrada" if delta > 0 else "ajuste_saida",
                    delta, atual["custo_medio"], "ajuste", None, observacao or "Contagem de estoque")
+    elif tipo == "inicial":
+        if quantidade < 0:
+            raise ValueError("Informe a quantidade que você tem.")
+        delta = quantidade - atual["estoque"]
+        if abs(delta) < 1e-9:
+            return
+        if custo is None or custo <= 0:
+            custo = atual["custo_medio"]
+            if not custo and item == "produto":
+                custo = custo_unitario_produto(conn, item_id)
+        movimentar(conn, data, item, item_id, "inicial", delta, custo, "ajuste", None, observacao or "Estoque inicial")
     elif tipo == "entrada":
         if quantidade <= 0:
             raise ValueError("Informe a quantidade.")

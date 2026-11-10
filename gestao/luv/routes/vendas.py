@@ -86,6 +86,7 @@ def nova():
                 desconto=dinheiro("desconto", 0), comissao=comissao,
                 cliente=campo("cliente"), observacao=campo("observacao"),
                 recebido=None if request.form.get("recebido") is None else request.form.get("recebido") == "1",
+                baixar_estoque=request.form.get("sem_estoque") != "1",
             )
             conn.commit()
             ok("Venda registrada.")

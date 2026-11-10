@@ -14,11 +14,15 @@ def comissao_padrao(canal, base):
 
 
 def registrar_venda(conn, data, canal_id, itens, desconto=0, comissao=None, cliente=None,
-                    observacao=None, recebido=None):
+                    observacao=None, recebido=None, baixar_estoque=True):
     """itens: [{"produto_id", "quantidade", "preco_unitario" (centavos, opcional), "sabores": [produto_id]}]
 
     Kits (sabores_por_kit > 0) precisam da lista de sabores: um id por brownie do kit.
+    baixar_estoque=False: venda de antes do controle de estoque. Entra na receita, no CMV
+    (pelo custo da ficha) e no caixa, mas não mexe no estoque, que já foi contado.
     """
+    if not baixar_estoque and not observacao:
+        observacao = "Venda anterior ao controle de estoque"
     canal = conn.execute("SELECT * FROM canais WHERE id = ?", (canal_id,)).fetchone()
     if canal is None:
         raise ValueError("Escolha o canal da venda.")
@@ -62,21 +66,26 @@ def registrar_venda(conn, data, canal_id, itens, desconto=0, comissao=None, clie
         if p["sabores_por_kit"]:
             custo_kit = 0.0
             for linha in estoque.ficha(conn, p["id"]):
-                c = estoque.movimentar(conn, data, "insumo", linha.insumo_id, "venda", -linha.quantidade * q,
-                                       None, "venda", venda_id)
+                if baixar_estoque:
+                    c = estoque.movimentar(conn, data, "insumo", linha.insumo_id, "venda", -linha.quantidade * q,
+                                           None, "venda", venda_id)
+                    afetados.add(("insumo", linha.insumo_id))
+                else:
+                    c = linha.custo_unitario
                 custo_kit += c * linha.quantidade
-                afetados.add(("insumo", linha.insumo_id))
             for s in sabores:
                 c = estoque.custo_unitario_produto(conn, s)
-                estoque.movimentar(conn, data, "produto", s, "venda", -q, c, "venda", venda_id)
+                if baixar_estoque:
+                    estoque.movimentar(conn, data, "produto", s, "venda", -q, c, "venda", venda_id)
+                    afetados.add(("produto", s))
                 custo_kit += c
-                afetados.add(("produto", s))
             custo_unit = custo_kit
             unidades += q * len(sabores)
         else:
             custo_unit = estoque.custo_unitario_produto(conn, p["id"])
-            estoque.movimentar(conn, data, "produto", p["id"], "venda", -q, custo_unit, "venda", venda_id)
-            afetados.add(("produto", p["id"]))
+            if baixar_estoque:
+                estoque.movimentar(conn, data, "produto", p["id"], "venda", -q, custo_unit, "venda", venda_id)
+                afetados.add(("produto", p["id"]))
             unidades += q
         cmv += custo_unit * q
         conn.execute(

@@ -81,7 +81,7 @@ def insumo_form(iid=None):
                 ).lastrowid
                 inicial = numero("estoque_inicial", 0)
                 if inicial and inicial > 0:
-                    se.movimentar(conn, data("data_inicial", hoje().isoformat()), "insumo", iid, "ajuste_entrada",
+                    se.movimentar(conn, data("data_inicial", hoje().isoformat()), "insumo", iid, "inicial",
                                   inicial, custo, "ajuste", None, "Estoque inicial")
                     se.recalcular(conn, "insumo", iid)
             conn.commit()
@@ -115,8 +115,13 @@ def _custo_informado(unidade):
 def ajustar(item, item_id):
     conn = get_db()
     try:
+        custo = dinheiro("custo", None)
+        if custo is not None and item == "insumo":
+            unidade = conn.execute("SELECT unidade FROM insumos WHERE id = ?", (item_id,)).fetchone()
+            if unidade and unidade[0] in ("g", "ml"):
+                custo = custo / 1000  # o formulário pede R$/kg ou R$/L
         se.ajustar(conn, data("data", hoje().isoformat()), item, item_id, request.form.get("tipo", "perda"),
-                   numero("quantidade", obrigatorio=True), campo("observacao"))
+                   numero("quantidade", obrigatorio=True), campo("observacao"), custo=custo)
         conn.commit()
         ok("Estoque ajustado.")
     except (ErroFormulario, ValueError) as e:

@@ -319,3 +319,55 @@ def test_login_nao_redireciona_para_fora(alvo):
 def test_sem_senha_fica_aberto_localmente(alvo):
     app = create_app(database=alvo, testing=True, senha="")
     assert app.test_client().get("/").status_code == 200
+
+
+# ---------------------------------------------------------------- pago do bolso
+
+def test_despesa_paga_do_bolso_gera_aporte(conn):
+    cat = _cat(conn, "Gás de cozinha")
+    lid = financeiro.salvar_lancamento(conn, {"descricao": "Botijão", "valor": 11000, "categoria_id": cat, "conta_id": 1,
+                                              "competencia": D(), "vencimento": D()})
+    financeiro.sincronizar_bolso(conn, lid, True)
+    aporte = conn.execute("SELECT * FROM lancamentos WHERE origem = 'bolso'").fetchone()
+    assert aporte["tipo"] == "entrada" and aporte["valor"] == 11000 and aporte["pagamento"] == D()
+    assert conn.execute("SELECT grupo FROM categorias WHERE id = ?", (aporte["categoria_id"],)).fetchone()[0] == "aporte"
+    # a despesa fica paga, o saldo não muda e a DRE enxerga só a despesa
+    assert conn.execute("SELECT pagamento FROM lancamentos WHERE id = ?", (lid,)).fetchone()[0] == D()
+    assert financeiro.saldo_em(conn, D()) == 0
+    assert financeiro.dre_mes(conn, HOJE.year, HOJE.month)["linha"]["lucro_liquido"]["total"] == -11000
+    # salvar de novo não duplica; desligar remove
+    financeiro.sincronizar_bolso(conn, lid, True)
+    assert conn.execute("SELECT COUNT(*) FROM lancamentos WHERE origem = 'bolso'").fetchone()[0] == 1
+    financeiro.sincronizar_bolso(conn, lid, False)
+    assert conn.execute("SELECT COUNT(*) FROM lancamentos WHERE origem = 'bolso'").fetchone()[0] == 0
+
+
+def test_compra_paga_do_bolso(conn):
+    choc = insumo(conn, "Chocolate")
+    cid = estoque.registrar_compra(conn, D(), [(choc, 1000, 6000)], conta_id=1, pago=False, bolso=True)
+    l = conn.execute("SELECT tipo, valor, pagamento FROM lancamentos WHERE origem = 'compra' ORDER BY tipo").fetchall()
+    assert [(r["tipo"], r["valor"], r["pagamento"]) for r in l] == [("entrada", 6000, D()), ("saida", 6000, D())]
+    assert financeiro.saldo_em(conn, D()) == 0
+    estoque.excluir_compra(conn, cid)
+    assert conn.execute("SELECT COUNT(*) FROM lancamentos").fetchone()[0] == 0
+
+
+def test_bolso_pelos_formularios(alvo):
+    app = create_app(database=alvo, testing=True)
+    c = app.test_client()
+    r = c.post("/lancamentos/novo", data={"descricao": "Formas", "valor": "89,90", "categoria_id": "5",
+                                          "conta_id": "1", "competencia": D(), "vencimento": D(), "bolso": "1"})
+    assert r.status_code == 302
+    with app.app_context():
+        conn = db.get_db()
+        pai = conn.execute("SELECT * FROM lancamentos WHERE origem = 'manual'").fetchone()
+        filho = conn.execute("SELECT * FROM lancamentos WHERE origem = 'bolso'").fetchone()
+        assert pai["pagamento"] == D() and filho["valor"] == 8990 and filho["origem_id"] == pai["id"]
+        pid, fid = pai["id"], filho["id"]
+    assert "pago do seu bolso" in c.get(f"/lancamentos?mes={D()[:7]}").data.decode()
+    # o aporte leva à despesa; excluir a despesa leva o aporte junto
+    assert c.get(f"/lancamentos/{fid}").headers["Location"].endswith(f"/lancamentos/{pid}")
+    c.post(f"/lancamentos/{fid}/excluir")
+    c.post(f"/lancamentos/{pid}/excluir")
+    with app.app_context():
+        assert db.get_db().execute("SELECT COUNT(*) FROM lancamentos").fetchone()[0] == 0

@@ -34,7 +34,9 @@
       <label class="campo mt"><span>Conta</span>
         <select name="conta_id">{% for c in contas %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}<option value="">Sem conta</option></select>
       </label>
-      <label class="switch mt"><input type="checkbox" name="pago" value="1" id="pago" checked><i></i><span>Paga à vista</span></label>
+      <label class="switch mt"><input type="checkbox" name="bolso" value="1" id="bolso" {{ 'checked' if request.form.bolso }}><i></i><span>Paguei do meu bolso</span></label>
+      <p class="muted hidden" id="bolso-dica" style="font-size:12px;margin-top:6px">Registra um aporte seu do mesmo valor. O saldo da conta não muda.</p>
+      <label class="switch mt" id="campo-pago"><input type="checkbox" name="pago" value="1" id="pago" checked><i></i><span>Paga à vista</span></label>
       <label class="campo mt hidden" id="campo-venc"><span>Vencimento</span><input type="date" name="vencimento" value="{{ request.form.vencimento or hoje_iso }}"></label>
       <button class="btn mt" style="width:100%">Registrar compra</button>
     </div>
@@ -107,7 +109,15 @@ if (itens) {
   document.getElementById('add-item').addEventListener('click', () => addItem().querySelector('select').focus());
   if (SUGESTAO.length) SUGESTAO.forEach(s => addItem(s.id, s.sugestao)); else addItem();
   const pago = document.getElementById('pago');
-  pago.addEventListener('change', () => document.getElementById('campo-venc').classList.toggle('hidden', pago.checked));
+  const bolso = document.getElementById('bolso');
+  const syncPag = () => {
+    document.getElementById('campo-pago').classList.toggle('hidden', bolso.checked);
+    document.getElementById('bolso-dica').classList.toggle('hidden', !bolso.checked);
+    document.getElementById('campo-venc').classList.toggle('hidden', pago.checked || bolso.checked);
+  };
+  pago.addEventListener('change', syncPag);
+  bolso.addEventListener('change', syncPag);
+  syncPag();
 }
 </script>
 {% endblock %}

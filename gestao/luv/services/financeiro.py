@@ -94,6 +94,52 @@ def salvar_lancamento(conn, dados, lancamento_id=None):
     return cur.lastrowid
 
 
+# ---------------------------------------------------------------- pago do bolso
+
+def categoria_aporte(conn):
+    """Categoria usada nos aportes automáticos: 'Aporte da dona' ou a primeira de aporte."""
+    row = conn.execute(
+        "SELECT id FROM categorias WHERE grupo = 'aporte' "
+        "ORDER BY CASE WHEN nome = 'Aporte da dona' THEN 0 ELSE 1 END, id LIMIT 1"
+    ).fetchone()
+    if row:
+        return row["id"]
+    return conn.execute("INSERT INTO categorias (nome, grupo) VALUES ('Aporte da dona', 'aporte')").lastrowid
+
+
+def registrar_aporte(conn, valor, data, conta_id, descricao, origem, origem_id):
+    """Entrada de aporte já paga, ligada à saída que a dona pagou do próprio bolso.
+
+    Saída e aporte entram na mesma conta e data: o saldo não muda, a despesa
+    vai para a DRE e o aporte fica registrado.
+    """
+    conn.execute(
+        "INSERT INTO lancamentos (descricao, valor, tipo, categoria_id, conta_id, competencia, vencimento, "
+        "pagamento, origem, origem_id) VALUES (?, ?, 'entrada', ?, ?, ?, ?, ?, ?, ?)",
+        (f"Aporte · {descricao}", valor, categoria_aporte(conn), conta_id, data, data, data, origem, origem_id),
+    )
+
+
+def tem_bolso(conn, lancamento_id):
+    return conn.execute(
+        "SELECT 1 FROM lancamentos WHERE origem = 'bolso' AND origem_id = ?", (lancamento_id,)
+    ).fetchone() is not None
+
+
+def sincronizar_bolso(conn, lancamento_id, ativo):
+    """Recria (ou remove) o aporte ligado a um lançamento pago do bolso."""
+    conn.execute("DELETE FROM lancamentos WHERE origem = 'bolso' AND origem_id = ?", (lancamento_id,))
+    if not ativo:
+        return
+    l = conn.execute("SELECT * FROM lancamentos WHERE id = ?", (lancamento_id,)).fetchone()
+    if l is None or l["tipo"] != "saida":
+        return
+    quando = l["pagamento"] or l["vencimento"]
+    if not l["pagamento"]:
+        conn.execute("UPDATE lancamentos SET pagamento = ? WHERE id = ?", (quando, lancamento_id))
+    registrar_aporte(conn, l["valor"], quando, l["conta_id"], l["descricao"], "bolso", lancamento_id)
+
+
 def status_lancamento(l, hoje_iso=None):
     hoje_iso = hoje_iso or hoje().isoformat()
     if l["pagamento"]:

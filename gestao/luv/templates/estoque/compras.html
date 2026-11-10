@@ -23,7 +23,7 @@
           {% if c.observacao %}<span class="sub">{{ c.observacao }}</span>{% endif %}
         </td>
         <td class="num">{{ c.total|brl }}</td>
-        <td>{% if c.pagamento %}<span class="pill pago">Pago</span>{% elif c.vencimento %}<span class="pill {{ 'atrasado' if c.vencimento < hoje_iso }}">Vence {{ c.vencimento|data_curta }}</span>{% endif %}</td>
+        <td>{% if c.do_bolso %}<span class="pill azul">Seu bolso</span>{% elif c.pagamento %}<span class="pill pago">Pago</span>{% elif c.vencimento %}<span class="pill {{ 'atrasado' if c.vencimento < hoje_iso }}">Vence {{ c.vencimento|data_curta }}</span>{% endif %}</td>
         <td class="acoes-linha">
           <form method="post" action="{{ url_for('estoque.compra_excluir', cid=c.id) }}" data-confirmar="Excluir esta compra? O estoque e o caixa serão estornados.">
             <button class="btn-x" title="Excluir">×</button>

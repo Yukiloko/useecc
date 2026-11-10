@@ -71,21 +71,24 @@
       <tbody>
       {% for l in lancamentos %}
         {% set st = status(l) %}
+        {% set aporte_auto = l.origem == 'bolso' or (l.origem == 'compra' and l.tipo == 'entrada') %}
         <tr>
           {% if pendentes %}<td style="padding-right:0">{% if not l.pagamento %}<input type="checkbox" form="lote" name="ids" value="{{ l.id }}" data-valor="{{ l.valor if l.tipo == 'entrada' else -l.valor }}" class="lote-chk" style="accent-color:var(--accent)">{% endif %}</td>{% endif %}
           <td>{{ l.vencimento|data_curta }}{% if l.pagamento and l.pagamento != l.vencimento %}<span class="sub">pago {{ l.pagamento|data_curta }}</span>{% endif %}</td>
           <td><a href="{{ url_for('financeiro.lancamento_editar', lid=l.id) }}" style="color:inherit">{{ l.descricao }}</a>
-            <span class="sub">{{ l.conta or 'Sem conta' }}{% if l.origem == 'recorrente' %} · recorrente{% elif l.origem in ('venda', 'compra') %} · automático{% endif %}</span></td>
+            <span class="sub">{{ l.conta or 'Sem conta' }}{% if aporte_auto %} · aporte do seu bolso{% elif l.do_bolso %} · pago do seu bolso{% elif l.origem == 'recorrente' %} · recorrente{% elif l.origem in ('venda', 'compra') %} · automático{% endif %}</span></td>
           <td><span class="muted">{{ l.categoria }}</span><span class="sub">{{ grupos[l.grupo][0] }}</span></td>
           <td class="num {{ 'pos' if l.tipo == 'entrada' }}">{{ '+' if l.tipo == 'entrada' else '−' }}{{ l.valor|brl }}</td>
           <td>{{ status_pill(st) }}</td>
           <td class="acoes-linha">
+            {% if not aporte_auto %}
             <form method="post" action="{{ url_for('financeiro.lancamento_pagar', lid=l.id) }}">
               {% if st == 'pago' %}<button class="btn ghost pq" title="Voltar para pendente">Desfazer</button>
               {% else %}<button class="btn sec pq">{{ 'Receber' if l.tipo == 'entrada' else 'Pagar' }}</button>{% endif %}
             </form>
-            {% if l.origem not in ('venda', 'compra') %}
-            <form method="post" action="{{ url_for('financeiro.lancamento_excluir', lid=l.id) }}" data-confirmar="Excluir este lançamento?">
+            {% endif %}
+            {% if l.origem not in ('venda', 'compra', 'bolso') %}
+            <form method="post" action="{{ url_for('financeiro.lancamento_excluir', lid=l.id) }}" data-confirmar="Excluir este lançamento?{{ ' O aporte ligado a ele também sai.' if l.do_bolso }}">
               <button class="btn-x" title="Excluir">×</button>
             </form>
             {% endif %}

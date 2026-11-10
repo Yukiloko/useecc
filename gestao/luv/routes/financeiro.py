@@ -52,7 +52,9 @@ def _consulta_lancamentos(conn, per, f):
         where.append("l.categoria_id = ?")
         params.append(f["categoria"])
     return conn.execute(
-        "SELECT l.*, c.nome AS categoria, c.grupo, ct.nome AS conta FROM lancamentos l "
+        "SELECT l.*, c.nome AS categoria, c.grupo, ct.nome AS conta, "
+        "(SELECT COUNT(*) FROM lancamentos b WHERE b.origem = 'bolso' AND b.origem_id = l.id) AS do_bolso "
+        "FROM lancamentos l "
         "JOIN categorias c ON c.id = l.categoria_id LEFT JOIN contas ct ON ct.id = l.conta_id "
         f"WHERE {' AND '.join(where)} ORDER BY {coluna}, l.id",
         params,
@@ -97,9 +99,11 @@ def _csv(buf, nome):
                     headers={"Content-Disposition": f"attachment; filename={nome}"})
 
 
-def _form_lancamento(conn, lanc=None):
+def _form_lancamento(conn, lanc=None, bolso=False):
+    if request.method == "POST":
+        bolso = request.form.get("bolso") == "1"
     return render_template(
-        "financeiro/lancamento_form.html", lanc=lanc,
+        "financeiro/lancamento_form.html", lanc=lanc, bolso=bolso,
         categorias=sf.categorias_por_grupo(conn), grupos=sf.GRUPOS,
         contas=conn.execute("SELECT * FROM contas WHERE ativa = 1 ORDER BY id").fetchall(),
         tipo_padrao=request.args.get("tipo", "saida"),
@@ -109,8 +113,10 @@ def _form_lancamento(conn, lanc=None):
 def _ler_lancamento():
     competencia = data("competencia")
     vencimento = data("vencimento", competencia)
-    pago = request.form.get("pago") == "1"
+    bolso = request.form.get("bolso") == "1"
+    pago = request.form.get("pago") == "1" or bolso
     return {
+        "bolso": bolso,
         "descricao": campo("descricao"),
         "valor": dinheiro("valor", obrigatorio=True),
         "categoria_id": inteiro("categoria_id"),
@@ -128,7 +134,8 @@ def lancamento_novo():
     if request.method == "POST":
         try:
             dados = _ler_lancamento()
-            sf.salvar_lancamento(conn, dados)
+            lid = sf.salvar_lancamento(conn, dados)
+            sf.sincronizar_bolso(conn, lid, dados["bolso"])
             conn.commit()
             ok("Lançamento salvo.")
             if request.form.get("continuar"):
@@ -146,6 +153,9 @@ def lancamento_editar(lid):
     lanc = conn.execute("SELECT * FROM lancamentos WHERE id = ?", (lid,)).fetchone()
     if lanc is None:
         return redirect(url_for("financeiro.lancamentos"))
+    if lanc["origem"] == "bolso":
+        # o aporte automático é editado pela despesa que o gerou
+        return redirect(url_for("financeiro.lancamento_editar", lid=lanc["origem_id"]))
     if lanc["origem"] in ("venda", "compra") and request.method == "POST":
         # gerado automaticamente: só data e conta de pagamento são editáveis
         try:
@@ -162,13 +172,14 @@ def lancamento_editar(lid):
         try:
             dados = _ler_lancamento()
             sf.salvar_lancamento(conn, dados, lid)
+            sf.sincronizar_bolso(conn, lid, dados["bolso"])
             conn.commit()
             ok("Lançamento atualizado.")
             return redirect(url_for("financeiro.lancamentos", mes=dados["vencimento"][:7]))
         except (ErroFormulario, ValueError) as e:
             conn.rollback()
             erro(e)
-    return _form_lancamento(conn, lanc)
+    return _form_lancamento(conn, lanc, bolso=sf.tem_bolso(conn, lid))
 
 
 @bp.route("/lancamentos/<int:lid>/pagar", methods=["POST"])
@@ -178,6 +189,8 @@ def lancamento_pagar(lid):
     if l:
         if l["pagamento"]:
             conn.execute("UPDATE lancamentos SET pagamento = NULL WHERE id = ?", (lid,))
+            # se tinha sido pago do bolso, o aporte deixa de existir
+            sf.sincronizar_bolso(conn, lid, False)
             ok("Voltou para pendente.")
         else:
             conn.execute("UPDATE lancamentos SET pagamento = ? WHERE id = ?", (hoje().isoformat(), lid))
@@ -208,8 +221,10 @@ def lancamento_excluir(lid):
     l = conn.execute("SELECT * FROM lancamentos WHERE id = ?", (lid,)).fetchone()
     if l and l["origem"] in ("venda", "compra"):
         erro("Esse lançamento vem de uma venda ou compra. Exclua a venda ou a compra.")
+    elif l and l["origem"] == "bolso":
+        erro("Esse aporte foi criado por uma despesa paga do seu bolso. Edite ou exclua a despesa.")
     elif l:
-        conn.execute("DELETE FROM lancamentos WHERE id = ?", (lid,))
+        conn.execute("DELETE FROM lancamentos WHERE (origem = 'bolso' AND origem_id = ?) OR id = ?", (lid, lid))
         conn.commit()
         ok("Lançamento excluído.")
     return redirect(url_for("financeiro.lancamentos", mes=l["vencimento"][:7] if l else None))

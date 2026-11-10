@@ -148,8 +148,9 @@ def movimentos():
 def compras():
     conn = get_db()
     rows = conn.execute(
-        "SELECT c.*, l.pagamento, l.vencimento, (SELECT COUNT(*) FROM compra_itens WHERE compra_id = c.id) AS n_itens "
-        "FROM compras c LEFT JOIN lancamentos l ON l.origem = 'compra' AND l.origem_id = c.id "
+        "SELECT c.*, l.pagamento, l.vencimento, (SELECT COUNT(*) FROM compra_itens WHERE compra_id = c.id) AS n_itens, "
+        "(SELECT COUNT(*) FROM lancamentos a WHERE a.origem = 'compra' AND a.origem_id = c.id AND a.tipo = 'entrada') AS do_bolso "
+        "FROM compras c LEFT JOIN lancamentos l ON l.origem = 'compra' AND l.origem_id = c.id AND l.tipo = 'saida' "
         "ORDER BY c.data DESC, c.id DESC LIMIT 200"
     ).fetchall()
     itens = {}
@@ -182,9 +183,10 @@ def compra_nova():
                 itens.append((int(iid), q, v))
             d = data("data")
             pago = request.form.get("pago") == "1"
+            bolso = request.form.get("bolso") == "1"
             se.registrar_compra(conn, d, itens, fornecedor=campo("fornecedor"), conta_id=inteiro("conta_id"),
                                 vencimento=data("vencimento", d, obrigatorio=False) or d, pago=pago,
-                                observacao=campo("observacao"))
+                                observacao=campo("observacao"), bolso=bolso)
             conn.commit()
             ok("Compra registrada. Estoque e custo médio atualizados.")
             return redirect(url_for("estoque.compras"))

@@ -9,7 +9,7 @@ data retroativa ou excluído.
 from dataclasses import dataclass
 
 from ..fmt import qtd
-from .financeiro import categoria_sistema
+from .financeiro import categoria_sistema, registrar_aporte
 
 TIPOS_ENTRADA = {"compra", "producao", "ajuste_entrada", "estorno"}
 ROTULOS_MOV = {
@@ -159,8 +159,12 @@ def salvar_ficha(conn, produto_id, linhas):
 # ---------------------------------------------------------------- compras
 
 def registrar_compra(conn, data, itens, fornecedor=None, conta_id=None, vencimento=None,
-                     pago=True, observacao=None):
-    """itens: [(insumo_id, quantidade, valor_centavos)]. Gera a saída no financeiro."""
+                     pago=True, observacao=None, bolso=False):
+    """itens: [(insumo_id, quantidade, valor_centavos)]. Gera a saída no financeiro.
+
+    bolso=True: a dona pagou com dinheiro próprio; gera também o aporte do mesmo valor.
+    """
+    pago = pago or bolso
     itens = [(i, q, v) for i, q, v in itens if i and q and q > 0]
     if not itens:
         raise ValueError("Informe ao menos um insumo com quantidade.")
@@ -191,6 +195,8 @@ def registrar_compra(conn, data, itens, fornecedor=None, conta_id=None, vencimen
         (descricao, total, categoria_sistema(conn, "estoque"), conta_id, data, vencimento,
          data if pago else None, compra_id),
     )
+    if bolso:
+        registrar_aporte(conn, total, data, conta_id, descricao.lower(), "compra", compra_id)
     return compra_id
 
 

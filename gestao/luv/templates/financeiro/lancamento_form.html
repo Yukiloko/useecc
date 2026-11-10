@@ -58,7 +58,13 @@
   {% endif %}
 
   <div class="campos">
-    <label class="switch"><input type="checkbox" name="pago" value="1" id="pago" {{ 'checked' if (request.form.pago if request.form else (lanc and lanc.pagamento)) }}><i></i><span id="pago-rot">Já foi pago</span></label>
+    {% if not auto %}
+    <div class="campo span-all" id="campo-bolso">
+      <label class="switch"><input type="checkbox" name="bolso" value="1" id="bolso" {{ 'checked' if bolso }}><i></i><span>Paguei do meu bolso</span></label>
+      <span class="dica">Registra junto um aporte seu do mesmo valor. A despesa entra na DRE e o saldo da conta não muda.</span>
+    </div>
+    {% endif %}
+    <label class="switch" id="campo-pago"><input type="checkbox" name="pago" value="1" id="pago" {{ 'checked' if (request.form.pago if request.form else (lanc and lanc.pagamento)) }}><i></i><span id="pago-rot">Já foi pago</span></label>
     <label class="campo" id="campo-pag"><span>Data do pagamento</span><input type="date" name="pagamento" value="{{ (lanc.pagamento if lanc else none) or request.form.pagamento or hoje_iso }}"></label>
   </div>
   {% if not auto %}
@@ -86,8 +92,18 @@
 <script>
 const pago = document.getElementById('pago');
 const campoPag = document.getElementById('campo-pag');
-function syncPago() { campoPag.classList.toggle('hidden', !pago.checked); }
-pago.addEventListener('change', syncPago); syncPago();
+const bolso = document.getElementById('bolso');
+function syncPago() {
+  const doBolso = bolso && bolso.checked && !document.getElementById('campo-bolso').classList.contains('hidden');
+  if (doBolso) pago.checked = true;
+  document.getElementById('campo-pago').classList.toggle('hidden', !!doBolso);
+  campoPag.classList.toggle('hidden', !pago.checked);
+  if (doBolso) campoPag.querySelector('span').textContent = 'Data em que você pagou';
+  else campoPag.querySelector('span').textContent = 'Data do pagamento';
+}
+pago.addEventListener('change', syncPago);
+if (bolso) bolso.addEventListener('change', syncPago);
+syncPago();
 
 const seg = document.getElementById('seg-tipo');
 if (seg) {
@@ -108,6 +124,10 @@ if (seg) {
     if (atual && atual.dataset.direcao && atual.dataset.direcao !== t) sel.value = '';
     syncDica();
     document.getElementById('pago-rot').textContent = t === 'entrada' ? 'Já foi recebido' : 'Já foi pago';
+    // pagar do bolso só faz sentido em saídas
+    const cb = document.getElementById('campo-bolso');
+    if (cb) { cb.classList.toggle('hidden', t !== 'saida'); if (t !== 'saida') bolso.checked = false; }
+    syncPago();
   }
   function syncDica() {
     const o = sel.selectedOptions[0];

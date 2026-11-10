@@ -229,11 +229,17 @@ def gerar_recorrencias(conn, ano, mes):
         ).fetchone()
         if existe:
             continue
-        dia = date(ano, mes, min(max(r["dia"], 1), ultimo)).isoformat()
+        dia = max(r["dia"], 1)
+        competencia = date(ano, mes, min(dia, ultimo)).isoformat()
+        vencimento = competencia
+        if r["mes_seguinte"]:
+            # referente a este mês, pago no mês seguinte (ex.: DAS)
+            pa, pm = mes_deslocado(ano, mes, 1)
+            vencimento = date(pa, pm, min(dia, calendar.monthrange(pa, pm)[1])).isoformat()
         conn.execute(
             "INSERT INTO lancamentos (descricao, valor, tipo, categoria_id, conta_id, competencia, vencimento, origem, origem_id) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, 'recorrente', ?)",
-            (r["descricao"], r["valor"], direcao(r["grupo"]), r["categoria_id"], r["conta_id"], dia, dia, r["id"]),
+            (r["descricao"], r["valor"], direcao(r["grupo"]), r["categoria_id"], r["conta_id"], competencia, vencimento, r["id"]),
         )
         criados += 1
     return criados

@@ -470,3 +470,33 @@ def test_estoque_inicial_antigo_sai_da_dre(alvo):
         conn = db.get_db()
         assert conn.execute("SELECT tipo FROM movimentos").fetchone()[0] == "inicial"
         assert financeiro.dre_mes(conn, HOJE.year, HOJE.month)["linha"]["custo"]["total"] == 0
+
+
+def test_recorrencia_que_vence_no_mes_seguinte(conn):
+    conn.execute("INSERT INTO recorrencias (descricao, valor, categoria_id, dia, mes_seguinte) VALUES ('DAS', 8200, ?, 10, 1)",
+                 (_cat(conn, "Impostos (DAS MEI)"),))
+    assert financeiro.gerar_recorrencias(conn, 2026, 11) == 1
+    assert financeiro.gerar_recorrencias(conn, 2026, 11) == 0
+    financeiro.gerar_recorrencias(conn, 2026, 12)
+    rows = conn.execute("SELECT competencia, vencimento FROM lancamentos ORDER BY competencia").fetchall()
+    assert [tuple(r) for r in rows] == [("2026-11-10", "2026-12-10"), ("2026-12-10", "2027-01-10")]
+    d = financeiro.dre_mes(conn, 2026, 11)
+    assert d["linha"]["deducao"]["total"] == -8200
+
+
+def test_banco_antigo_ganha_coluna_nova(tmp_path):
+    import sqlite3
+    caminho = tmp_path / "antigo.db"
+    c = sqlite3.connect(caminho)
+    c.execute("CREATE TABLE recorrencias (id INTEGER PRIMARY KEY, descricao TEXT NOT NULL, valor INTEGER NOT NULL, "
+              "categoria_id INTEGER NOT NULL, conta_id INTEGER, dia INTEGER NOT NULL DEFAULT 5, ativa INTEGER NOT NULL DEFAULT 1)")
+    c.execute("INSERT INTO recorrencias (descricao, valor, categoria_id) VALUES ('DAS', 8200, 1)")
+    c.commit(); c.close()
+    app = create_app(database=caminho, testing=True)
+    with app.app_context():
+        assert db.get_db().execute("SELECT mes_seguinte FROM recorrencias").fetchone()[0] == 0
+    r = app.test_client().post("/recorrentes", data={"id": "1", "descricao": "DAS", "valor": "82,00", "categoria_id": "1",
+                                                      "dia": "10", "ativa": "1", "mes_seguinte": "1"})
+    assert r.status_code == 302
+    with app.app_context():
+        assert db.get_db().execute("SELECT mes_seguinte FROM recorrencias").fetchone()[0] == 1

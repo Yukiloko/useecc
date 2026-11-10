@@ -247,14 +247,15 @@ def recorrentes():
         try:
             rid = inteiro("id")
             valores = (campo("descricao") or "", dinheiro("valor", obrigatorio=True), inteiro("categoria_id"),
-                       inteiro("conta_id"), max(1, min(31, inteiro("dia", 5))), 1 if request.form.get("ativa", "1") == "1" else 0)
+                       inteiro("conta_id"), max(1, min(31, inteiro("dia", 5))), 1 if request.form.get("ativa", "1") == "1" else 0,
+                       1 if request.form.get("mes_seguinte") == "1" else 0)
             if not valores[0] or not valores[2]:
                 raise ErroFormulario("Preencha descrição e categoria.")
             if rid:
-                conn.execute("UPDATE recorrencias SET descricao=?, valor=?, categoria_id=?, conta_id=?, dia=?, ativa=? WHERE id=?",
+                conn.execute("UPDATE recorrencias SET descricao=?, valor=?, categoria_id=?, conta_id=?, dia=?, ativa=?, mes_seguinte=? WHERE id=?",
                              (*valores, rid))
             else:
-                conn.execute("INSERT INTO recorrencias (descricao, valor, categoria_id, conta_id, dia, ativa) VALUES (?, ?, ?, ?, ?, ?)",
+                conn.execute("INSERT INTO recorrencias (descricao, valor, categoria_id, conta_id, dia, ativa, mes_seguinte) VALUES (?, ?, ?, ?, ?, ?, ?)",
                              valores)
             conn.commit()
             ok("Recorrência salva.")

@@ -49,8 +49,23 @@ def init_schema(conn, commit=True):
         conn.executescript(schema_postgres(sql))
     else:
         conn.executescript(sql)
+    migrar(conn)
     if commit:
         conn.commit()
+
+
+def garantir_coluna(conn, tabela, coluna, definicao):
+    """Acrescenta uma coluna nova em bancos criados antes dela existir."""
+    if isinstance(conn, ConexaoPG):
+        conn.execute(f"ALTER TABLE {tabela} ADD COLUMN IF NOT EXISTS {coluna} {definicao}")
+        return
+    colunas = [r[1] for r in conn.execute(f"PRAGMA table_info({tabela})")]
+    if coluna not in colunas:
+        conn.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {definicao}")
+
+
+def migrar(conn):
+    garantir_coluna(conn, "recorrencias", "mes_seguinte", "INTEGER NOT NULL DEFAULT 0")
 
 
 def get_db():

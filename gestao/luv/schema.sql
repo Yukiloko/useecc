@@ -52,7 +52,9 @@ CREATE TABLE IF NOT EXISTS recorrencias (
     categoria_id INTEGER NOT NULL REFERENCES categorias(id),
     conta_id INTEGER REFERENCES contas(id),
     dia INTEGER NOT NULL DEFAULT 5,
-    ativa INTEGER NOT NULL DEFAULT 1
+    ativa INTEGER NOT NULL DEFAULT 1,
+    -- 1: a conta do mês vence no mês seguinte (ex.: DAS de novembro vence em dezembro)
+    mes_seguinte INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS canais (

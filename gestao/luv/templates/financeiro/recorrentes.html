@@ -26,7 +26,7 @@
       {% for r in recorrencias %}
         <tr class="{{ 'muted' if not r.ativa }}">
           <td>{{ r.descricao }}<span class="sub">{{ r.categoria }} · {{ grupos[r.grupo][0] }}{% if not r.ativa %} · pausada{% endif %}</span></td>
-          <td>{{ r.dia }}</td>
+          <td>{{ r.dia }}{% if r.mes_seguinte %}<span class="sub">do mês seguinte</span>{% endif %}</td>
           <td class="num">{{ r.valor|brl }}</td>
           <td>{% if r.id in gerados %}<span class="pill pago">Gerado</span>{% elif r.ativa %}<span class="pill">Falta gerar</span>{% else %}—{% endif %}</td>
           <td class="acoes-linha">
@@ -59,6 +59,10 @@
       <label class="campo"><span>Conta</span>
         <select name="conta_id"><option value="">Sem conta</option>{% for c in contas %}<option value="{{ c.id }}" {{ 'selected' if ed and ed.conta_id == c.id }}>{{ c.nome }}</option>{% endfor %}</select>
       </label>
+    </div>
+    <div class="campo">
+      <label class="switch"><input type="checkbox" name="mes_seguinte" value="1" {{ 'checked' if ed and ed.mes_seguinte }}><i></i><span>Vence no mês seguinte</span></label>
+      <span class="dica">Para contas que se referem a um mês e são pagas no outro, como o DAS. Gerando em novembro, a conta de novembro vence em dezembro e entra na DRE de novembro.</span>
     </div>
     {% if ed %}
     <label class="switch"><input type="checkbox" name="ativa" value="1" {{ 'checked' if ed.ativa }} onchange="this.nextElementSibling.nextElementSibling.textContent = this.checked ? 'Ativa' : 'Pausada'"><i></i><span>{{ 'Ativa' if ed.ativa else 'Pausada' }}</span></label>

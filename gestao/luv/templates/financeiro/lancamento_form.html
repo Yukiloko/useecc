@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% from "_macros.html" import dinheiro %}
+{% block titulo %}{{ 'Editar' if lanc else 'Novo' }} lançamento{% endblock %}
+{% block conteudo %}
+{% set auto = lanc and lanc.origem in ('venda', 'compra') %}
+{% set v = request.form if request.form else (lanc or {}) %}
+<header class="cabecalho">
+  <div>
+    <h1>{{ 'Editar lançamento' if lanc else 'Novo lançamento' }}</h1>
+    <p class="sub">{% if auto %}Gerado por {{ 'uma venda' if lanc.origem == 'venda' else 'uma compra' }}. Só datas e conta podem mudar aqui.{% else %}Despesa, conta a pagar ou receita que não seja venda de produto.{% endif %}</p>
+  </div>
+  <div class="acoes"><a class="btn sec" href="{{ url_for('financeiro.lancamentos', mes=(lanc.vencimento[:7] if lanc else none)) }}">Voltar</a></div>
+</header>
+
+<div class="grid g-2-1">
+<form class="card form" method="post">
+  {% if not auto %}
+  <div class="campo">
+    <span>Tipo</span>
+    <div class="seg" id="seg-tipo">
+      <button type="button" data-tipo="saida">Saída</button>
+      <button type="button" data-tipo="entrada">Entrada</button>
+    </div>
+  </div>
+  <div class="campos">
+    <label class="campo span-2"><span>Descrição</span><input name="descricao" value="{{ v.descricao or '' }}" placeholder="Ex.: conta de luz de outubro" required autofocus></label>
+    <label class="campo">
+      <span id="rot-valor">Valor</span>
+      <div class="prefixo"><i>R$</i><input name="valor" id="valor" class="dinheiro" inputmode="decimal" placeholder="0,00" required
+        value="{{ request.form.valor if request.form else ((lanc.valor / 100)|num(2) if lanc else '') }}"></div>
+    </label>
+  </div>
+  {% if not lanc %}
+  <div class="campos">
+    <div class="campo">
+      <label class="switch"><input type="checkbox" name="parcelar" value="1" id="parcelar" {{ 'checked' if request.form.parcelar }}><i></i><span>Parcelado</span></label>
+      <span class="dica" id="parc-dica">Cria uma conta a pagar por mês.</span>
+    </div>
+    <label class="campo hidden" id="campo-parcelas"><span>Número de parcelas</span>
+      <input name="parcelas" id="parcelas" type="number" min="2" max="60" value="{{ request.form.parcelas or 2 }}" class="num">
+    </label>
+  </div>
+  {% endif %}
+  <div class="campos">
+    <label class="campo span-2"><span>Categoria</span>
+      <select name="categoria_id" id="categoria" required>
+        <option value="">Escolha…</option>
+        {% for g, cats in categorias.items() if cats %}
+          <optgroup label="{{ grupos[g][0] }}" data-direcao="{{ grupos[g][1] }}">
+            {% for c in cats %}<option value="{{ c.id }}" data-direcao="{{ grupos[g][1] }}" {{ 'selected' if (v.categoria_id|string) == (c.id|string) }}>{{ c.nome }}</option>{% endfor %}
+          </optgroup>
+        {% endfor %}
+      </select>
+      <span class="dica" id="cat-dica"></span>
+    </label>
+    <label class="campo"><span>Conta</span>
+      <select name="conta_id"><option value="">Sem conta</option>{% for c in contas %}<option value="{{ c.id }}" {{ 'selected' if (v.conta_id|string) == (c.id|string) }}>{{ c.nome }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  <div class="campos">
+    <label class="campo"><span>Competência</span><input type="date" name="competencia" value="{{ v.competencia or hoje_iso }}" required><span class="dica">Mês em que entra na DRE.</span></label>
+    <label class="campo"><span id="rot-venc">Vencimento</span><input type="date" name="vencimento" id="vencimento" value="{{ v.vencimento or hoje_iso }}" required><span class="dica" id="dica-venc">Quando sai ou entra no caixa.</span></label>
+  </div>
+  {% else %}
+  <div class="campos">
+    <div class="campo"><span>Descrição</span><b>{{ lanc.descricao }}</b></div>
+    <div class="campo"><span>Valor</span><b>{{ lanc.valor|brl }}</b></div>
+    <label class="campo"><span>Vencimento</span><input type="date" name="vencimento" value="{{ lanc.vencimento }}" required></label>
+    <label class="campo"><span>Conta</span>
+      <select name="conta_id"><option value="">Sem conta</option>{% for c in contas %}<option value="{{ c.id }}" {{ 'selected' if lanc.conta_id == c.id }}>{{ c.nome }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  {% endif %}
+
+  <div class="campos" id="bloco-pagamento">
+    {% if not auto %}
+    <div class="campo span-all" id="campo-bolso">
+      <label class="switch"><input type="checkbox" name="bolso" value="1" id="bolso" {{ 'checked' if bolso }}><i></i><span>Paguei do meu bolso</span></label>
+      <span class="dica">Registra junto um aporte seu do mesmo valor. A despesa entra na DRE e o saldo da conta não muda.</span>
+    </div>
+    {% endif %}
+    <label class="switch" id="campo-pago"><input type="checkbox" name="pago" value="1" id="pago" {{ 'checked' if (request.form.pago if request.form else (lanc and lanc.pagamento)) }}><i></i><span id="pago-rot">Já foi pago</span></label>
+    <label class="campo" id="campo-pag"><span>Data do pagamento</span><input type="date" name="pagamento" value="{{ (lanc.pagamento if lanc else none) or request.form.pagamento or hoje_iso }}"></label>
+  </div>
+  {% if not auto %}
+  <label class="campo"><span>Observação</span><textarea name="observacao" rows="2">{{ v.observacao or '' }}</textarea></label>
+  {% endif %}
+
+  <div class="rodape-form">
+    {% if not lanc %}<button class="btn sec" name="continuar" value="1">Salvar e lançar outro</button>{% endif %}
+    <button class="btn" type="submit">Salvar</button>
+  </div>
+</form>
+
+<aside class="card">
+  <h2 style="margin-bottom:12px">Onde cada categoria aparece</h2>
+  <ul class="lista texto" style="font-size:13px">
+    <li><span><b>Deduções, custos, despesas variáveis e fixas</b><small class="muted">Entram na DRE pela competência e no caixa pelo pagamento.</small></span></li>
+    <li><span><b>Compras de insumos</b><small class="muted">Registre em Estoque › Compras. Vão para o estoque e viram custo quando o brownie é vendido.</small></span></li>
+    <li><span><b>Investimentos, aportes e retiradas</b><small class="muted">Só mexem no caixa. Não são despesa nem receita do mês.</small></span></li>
+  </ul>
+</aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const pago = document.getElementById('pago');
+const campoPag = document.getElementById('campo-pag');
+const bolso = document.getElementById('bolso');
+function syncPago() {
+  const doBolso = bolso && bolso.checked && !document.getElementById('campo-bolso').classList.contains('hidden');
+  if (doBolso) pago.checked = true;
+  document.getElementById('campo-pago').classList.toggle('hidden', !!doBolso);
+  campoPag.classList.toggle('hidden', !pago.checked);
+  if (doBolso) campoPag.querySelector('span').textContent = 'Data em que você pagou';
+  else campoPag.querySelector('span').textContent = 'Data do pagamento';
+}
+pago.addEventListener('change', syncPago);
+if (bolso) bolso.addEventListener('change', syncPago);
+syncPago();
+
+// parcelamento: valor vira total, vencimento vira o da 1ª parcela, pagamento fica para depois
+const parcelar = document.getElementById('parcelar');
+if (parcelar) {
+  const nInput = document.getElementById('parcelas');
+  const dataBr = iso => iso.split('-').reverse().join('/');
+  const somaMeses = (iso, n) => {
+    const [a, m, d] = iso.split('-').map(Number);
+    const t = a * 12 + (m - 1) + n, ano = Math.floor(t / 12), mes = t % 12 + 1;
+    const ult = new Date(ano, mes, 0).getDate();
+    return `${ano}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`;
+  };
+  function syncParc() {
+    const on = parcelar.checked;
+    document.getElementById('campo-parcelas').classList.toggle('hidden', !on);
+    document.getElementById('bloco-pagamento').classList.toggle('hidden', on);
+    document.getElementById('rot-valor').textContent = on ? 'Valor total' : 'Valor';
+    document.getElementById('rot-venc').textContent = on ? 'Vencimento da 1ª parcela' : 'Vencimento';
+    document.getElementById('dica-venc').textContent = on ? 'As outras vencem no mesmo dia dos meses seguintes.' : 'Quando sai ou entra no caixa.';
+    const dica = document.getElementById('parc-dica');
+    const n = parseInt(nInput.value, 10);
+    const total = Luv.centavos(document.getElementById('valor').value);
+    const venc = document.getElementById('vencimento').value;
+    if (on && n >= 2 && total > 0 && venc) {
+      const parcela = Math.floor(total / n);
+      dica.textContent = `${n}× ${Luv.brl(parcela)}${total % n ? ' (com centavos na 1ª)' : ''} · de ${dataBr(venc)} a ${dataBr(somaMeses(venc, n - 1))}`;
+    } else {
+      dica.textContent = 'Cria uma conta a pagar por mês.';
+    }
+  }
+  [parcelar, nInput, document.getElementById('valor'), document.getElementById('vencimento')]
+    .forEach(el => { el.addEventListener('input', syncParc); el.addEventListener('change', syncParc); });
+  syncParc();
+}
+
+const seg = document.getElementById('seg-tipo');
+if (seg) {
+  const sel = document.getElementById('categoria');
+  const original = [...sel.querySelectorAll('optgroup')];
+  const dica = document.getElementById('cat-dica');
+  const textos = {
+    'Deduções e impostos': 'Reduz a receita na DRE.', 'Custos variáveis de produção': 'Entra no custo dos produtos (CMV).',
+    'Despesas variáveis': 'Sobe e desce com as vendas.', 'Despesas fixas': 'Entra no cálculo do ponto de equilíbrio.',
+    'Investimentos': 'Só caixa: não vira despesa na DRE.', 'Aportes e empréstimos': 'Só caixa: não é receita.',
+    'Retiradas e amortizações': 'Só caixa: não é despesa.', 'Outras receitas': 'Soma na receita bruta da DRE.',
+    'Receitas financeiras': 'Resultado financeiro da DRE.', 'Despesas financeiras': 'Resultado financeiro da DRE.',
+  };
+  function setTipo(t) {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.tipo === t));
+    original.forEach(g => { g.hidden = g.dataset.direcao !== t; g.disabled = g.dataset.direcao !== t; });
+    const atual = sel.selectedOptions[0];
+    if (atual && atual.dataset.direcao && atual.dataset.direcao !== t) sel.value = '';
+    syncDica();
+    document.getElementById('pago-rot').textContent = t === 'entrada' ? 'Já foi recebido' : 'Já foi pago';
+    // pagar do bolso só faz sentido em saídas
+    const cb = document.getElementById('campo-bolso');
+    if (cb) { cb.classList.toggle('hidden', t !== 'saida'); if (t !== 'saida') bolso.checked = false; }
+    syncPago();
+  }
+  function syncDica() {
+    const o = sel.selectedOptions[0];
+    dica.textContent = o && o.parentElement.label ? textos[o.parentElement.label] || '' : '';
+  }
+  sel.addEventListener('change', syncDica);
+  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTipo(b.dataset.tipo); });
+  const inicial = sel.selectedOptions[0]?.dataset.direcao || '{{ tipo_padrao }}';
+  setTipo(inicial);
+}
+</script>
+{% endblock %}

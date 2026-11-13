@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo %}
+{% block titulo %}Fluxo de caixa{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Fluxo de caixa</h1>
+    <p class="sub">O dinheiro que entrou e saiu de fato, e o que está previsto pelos vencimentos.</p>
+  </div>
+  <div class="acoes">
+    <div class="seg"><a class="on" href="{{ url_for('financeiro.fluxo') }}">Diário</a><a href="{{ url_for('financeiro.fluxo_anual', ano=per.ano) }}">Anual</a></div>
+    {{ periodo(per, 'financeiro.fluxo') }}
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi"><span class="kpi-rot">Saldo no início do mês</span><span class="kpi-val">{{ inicial|brl }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Entradas</span><span class="kpi-val pos">{{ tot.entradas|brl }}</span><span class="kpi-rodape">+ {{ tot.prev_entradas|brl }} previstas</span></div>
+  <div class="card kpi"><span class="kpi-rot">Saídas</span><span class="kpi-val">{{ tot.saidas|brl }}</span><span class="kpi-rodape">+ {{ tot.prev_saidas|brl }} previstas</span></div>
+  <div class="card kpi">
+    <span class="kpi-rot">{{ 'Saldo previsto no fim do mês' if final_proj is not none else 'Saldo no fim do mês' }}</span>
+    {% set fim = final_proj if final_proj is not none else final_real %}
+    <span class="kpi-val {{ 'neg' if fim is not none and fim < 0 }}">{{ fim|brl }}</span>
+    {% if final_proj is not none and final_real is not none %}<span class="kpi-rodape">Hoje {{ final_real|brl }}</span>{% endif %}
+  </div>
+</section>
+
+<section class="grid g2 mt">
+  <div class="card">
+    <div class="card-tit"><h2>Saldo dia a dia</h2></div>
+    {{ grafico_saldo }}
+    <div class="legenda"><span><i style="background:var(--chart-1)"></i>Realizado</span><span><i class="tracejado"></i>Previsto</span></div>
+  </div>
+  <div class="card">
+    <div class="card-tit"><h2>Entradas e saídas</h2></div>
+    {{ grafico_mov }}
+    <div class="legenda"><span><i style="background:var(--chart-in)"></i>Entradas</span><span><i style="background:var(--chart-out)"></i>Saídas</span><span class="muted">Inclui previstos</span></div>
+  </div>
+</section>
+
+<section class="grid g-2-1 mt">
+  <div class="card flush">
+    <div class="card-tit"><h2>Movimento diário</h2><span class="muted">Dias sem movimento ficam ocultos</span></div>
+    <div class="tabela-wrap">
+    <table>
+      <thead><tr><th>Dia</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr></thead>
+      <tbody>
+      {% for d in dias if d.entradas or d.saidas or d.prev_entradas or d.prev_saidas or d.data == hoje_iso %}
+        <tr>
+          <td>{{ d.data|data_curta }}{% if d.data == hoje_iso %} <span class="pill azul">hoje</span>{% elif d.futuro %} <span class="pill">previsto</span>{% endif %}</td>
+          <td class="num pos">{% if d.entradas %}{{ d.entradas|brl }}{% endif %}{% if d.prev_entradas %}<span class="sub">{{ d.prev_entradas|brl }} a receber</span>{% endif %}{% if not d.entradas and not d.prev_entradas %}<span class="muted">—</span>{% endif %}</td>
+          <td class="num">{% if d.saidas %}{{ d.saidas|brl }}{% endif %}{% if d.prev_saidas %}<span class="sub">{{ d.prev_saidas|brl }} a pagar</span>{% endif %}{% if not d.saidas and not d.prev_saidas %}<span class="muted">—</span>{% endif %}</td>
+          {% set s = d.saldo if not d.futuro else d.projetado %}
+          <td class="num {{ 'neg' if s is not none and s < 0 }}">{{ s|brl }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted" style="text-align:center;padding:30px">Sem movimento neste mês.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-tit"><h2>Saldo por conta</h2><span class="muted">hoje</span></div>
+    <ul class="lista">
+      {% for c in contas %}
+        <li><span class="princ"><b>{{ c.nome }}</b><small class="muted">A receber {{ c.a_receber|brl }} · a pagar {{ c.a_pagar|brl }}</small></span><b class="num {{ 'neg' if c.saldo < 0 }}">{{ c.saldo|brl }}</b></li>
+      {% endfor %}
+      {% if sem_conta %}<li><span class="princ"><b>Sem conta definida</b></span><b class="num">{{ sem_conta|brl }}</b></li>{% endif %}
+      <li><span><b>Total</b></span><b class="num">{{ saldo_total|brl }}</b></li>
+    </ul>
+    <p class="muted mt" style="font-size:13px">Atrasados entram no previsto como se fossem pagos hoje.</p>
+  </div>
+</section>
+{% endblock %}

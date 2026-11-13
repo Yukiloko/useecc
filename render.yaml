@@ -1,0 +1,16 @@
+# Render lê este arquivo: New › Blueprint › escolha este repositório e branch.
+services:
+  - type: web
+    name: luv-gestao
+    runtime: python
+    plan: free
+    region: virginia            # crie o projeto do Supabase em "East US (North Virginia)"
+    rootDir: gestao
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --workers 2 --timeout 60
+    healthCheckPath: /entrar
+    envVars:
+      - key: DATABASE_URL       # string de conexão do Supabase (Transaction pooler)
+        sync: false
+      - key: LUV_SENHA          # senha de acesso à gestão
+        sync: false

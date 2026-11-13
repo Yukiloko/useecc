@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import dinheiro %}
+{% block titulo %}{{ ins.nome if ins else 'Novo insumo' }}{% endblock %}
+{% block conteudo %}
+{% set v = request.form if request.form else (ins or {}) %}
+<header class="cabecalho">
+  <div>
+    <h1>{{ ins.nome if ins else 'Novo insumo' }}</h1>
+    <p class="sub">{% if ins %}Em estoque: {{ ins.estoque|qtd(ins.unidade) }} · custo médio {{ ins.custo_medio|custo_unidade(ins.unidade) }}{% else %}Use a menor unidade que você mede na receita: gramas, mililitros ou unidades.{% endif %}</p>
+  </div>
+  <div class="acoes">
+    {% if ins %}<button class="btn sec" data-abrir="dlg-ajuste" data-acao="{{ url_for('estoque.ajustar', item='insumo', item_id=ins.id) }}" data-set-nome="{{ ins.nome }}" data-set-unidade="{{ ins.unidade }}" data-set-atual="{{ ins.estoque|qtd(ins.unidade) }}">Ajustar estoque</button>{% endif %}
+    <a class="btn sec" href="{{ url_for('estoque.insumos') }}">Voltar</a>
+  </div>
+</header>
+
+<div class="grid g-2-1">
+  <form class="card form" method="post">
+    <div class="campos">
+      <label class="campo span-2"><span>Nome</span><input name="nome" value="{{ v.nome or '' }}" required {{ 'autofocus' if not ins }} placeholder="Ex.: Chocolate meio amargo"></label>
+      <label class="campo"><span>Tipo</span>
+        <select name="categoria">{% for k, n in nomes_cat.items() %}<option value="{{ k }}" {{ 'selected' if v.categoria == k }}>{{ n }}</option>{% endfor %}</select>
+      </label>
+    </div>
+    <div class="campos">
+      <label class="campo"><span>Unidade</span>
+        <select name="unidade" id="unidade">
+          {% for u, n in [('g', 'Gramas (g)'), ('ml', 'Mililitros (ml)'), ('un', 'Unidades (un)')] %}<option value="{{ u }}" {{ 'selected' if v.unidade == u }}>{{ n }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="campo"><span>Estoque mínimo</span><div class="sufixo"><input name="estoque_minimo" class="num" inputmode="decimal" value="{{ v.estoque_minimo|num if v.estoque_minimo else '' }}"><i class="un">g</i></div><span class="dica">Abaixo disso, entra na lista de compras.</span></label>
+      <label class="campo"><span>Fornecedor</span><input name="fornecedor" value="{{ v.fornecedor or '' }}"></label>
+    </div>
+    {% if not ins or not movs %}
+    <div class="campos">
+      {{ dinheiro('custo', (ins.custo_medio * (1000 if ins.unidade in ('g', 'ml') else 1)) if ins and ins.custo_medio else none, 'Custo de referência', dica='Por kg, litro ou unidade. Depois da primeira compra, vale o custo médio real.') }}
+      {% if not ins %}
+      <label class="campo"><span>Estoque atual</span><div class="sufixo"><input name="estoque_inicial" class="num" inputmode="decimal"><i class="un">g</i></div><span class="dica">Quanto você tem hoje, se já tem.</span></label>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if ins %}<label class="check"><input type="checkbox" name="inativo" value="1" {{ 'checked' if not ins.ativo }}> Arquivar (some das listas, mantém o histórico)</label>{% endif %}
+    <div class="rodape-form"><button class="btn">Salvar</button></div>
+  </form>
+
+  <aside>
+    {% if usos %}
+    <div class="card">
+      <h2 style="margin-bottom:10px">Usado em</h2>
+      <ul class="lista">{% for u in usos %}<li><span>{{ u.nome }}</span><span class="num muted">{{ u.quantidade|qtd(ins.unidade) }} por receita</span></li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if movs %}
+    <div class="card">
+      <h2 style="margin-bottom:10px">Últimas movimentações</h2>
+      <ul class="lista">
+        {% for m in movs[:15] %}
+          <li><span class="princ"><b>{{ rotulos.get(m.tipo, m.tipo) }}</b><small class="muted">{{ m.data|data_br }}{% if m.observacao %} · {{ m.observacao }}{% endif %}</small></span>
+            <span class="num {{ 'pos' if m.quantidade > 0 }}">{{ '+' if m.quantidade > 0 }}{{ m.quantidade|qtd(ins.unidade) }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% include "estoque/_dialog_ajuste.html" %}
+{% endblock %}
+{% block scripts %}
+<script>
+const u = document.getElementById('unidade');
+function syncU() { document.querySelectorAll('i.un').forEach(i => i.textContent = u.value); }
+u.addEventListener('change', syncU); syncU();
+</script>
+{% endblock %}

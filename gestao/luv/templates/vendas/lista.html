@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo, vazio %}
+{% block titulo %}Vendas{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Vendas</h1>
+    <p class="sub">Cada venda baixa o estoque, calcula o custo dos produtos e lança o recebimento no caixa.</p>
+  </div>
+  <div class="acoes">
+    {{ periodo(per, 'vendas.lista', {'canal': canal_id} if canal_id else {}) }}
+    <a class="btn" href="{{ url_for('vendas.nova') }}"><svg><use href="#i-mais"/></svg>Nova venda</a>
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi"><span class="kpi-rot">Faturamento bruto</span><span class="kpi-val">{{ tot.bruto|brl }}</span><span class="kpi-rodape">{{ tot.pedidos }} pedidos · {{ tot.unidades|num }} brownies</span></div>
+  <div class="card kpi"><span class="kpi-rot">Comissões e descontos</span><span class="kpi-val">{{ (tot.comissao + tot.desconto)|brl }}</span><span class="kpi-rodape">{{ ((tot.comissao + tot.desconto) / tot.bruto if tot.bruto else none)|pct }} do bruto</span></div>
+  <div class="card kpi"><span class="kpi-rot">Faturamento líquido</span><span class="kpi-val">{{ tot.liquido|brl }}</span><span class="kpi-rodape">Ticket médio {{ (tot.bruto / tot.pedidos)|round|int|brl if tot.pedidos else '—' }}</span></div>
+  <div class="card kpi"><span class="kpi-rot">Sobra após insumos</span><span class="kpi-val">{{ tot.margem|brl }}</span><span class="kpi-rodape">Custo dos produtos {{ tot.cmv|brl }}</span></div>
+</section>
+
+<section class="grid g-2-1 mt">
+  <div class="card flush">
+    <div class="card-tit">
+      <h2>Pedidos</h2>
+      <form class="filtros" method="get" style="margin:0">
+        <input type="hidden" name="mes" value="{{ per.chave }}">
+        <select name="canal" onchange="this.form.submit()">
+          <option value="">Todos os canais</option>
+          {% for c in canais %}<option value="{{ c.id }}" {{ 'selected' if c.id == canal_id }}>{{ c.nome }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    {% if vendas %}
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr><th>Data</th><th>Pedido</th><th class="num">Bruto</th><th class="num">Comissão</th><th class="num">Líquido</th><th>Recebimento</th><th></th></tr></thead>
+        <tbody>
+        {% for v in vendas %}
+          <tr>
+            <td>{{ v.data|data_curta }}</td>
+            <td>{{ itens.get(v.id, [])|join(', ') }}<span class="sub">{{ v.canal }}{% if v.cliente %} · {{ v.cliente }}{% endif %}{% if v.desconto %} · desconto {{ v.desconto|brl }}{% endif %}</span></td>
+            <td class="num">{{ v.bruto|brl }}</td>
+            <td class="num muted">{{ v.comissao|brl if v.comissao else '—' }}</td>
+            <td class="num">{{ (v.bruto - v.desconto - v.comissao)|brl }}</td>
+            <td>{% if v.recebido_em %}<span class="pill pago">Recebido</span>{% elif v.receber_em %}<span class="pill {{ 'atrasado' if v.receber_em < hoje_iso else '' }}">{{ v.receber_em|data_curta }}</span>{% else %}—{% endif %}</td>
+            <td class="acoes-linha">
+              <form method="post" action="{{ url_for('vendas.excluir', venda_id=v.id) }}" data-confirmar="Excluir esta venda? O estoque e o caixa serão estornados.">
+                <button class="btn-x" title="Excluir">×</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {{ vazio('Nenhuma venda em ' ~ per.nome, 'Registre o primeiro pedido do mês.', url_for('vendas.nova'), 'Nova venda') }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-tit"><h2>Mais vendidos</h2></div>
+    {% if ranking %}
+      <ul class="lista">
+        {% for r in ranking %}
+          <li>
+            <span class="princ"><b>{{ r.nome }}</b>
+              <small class="muted">{{ r.quantidade|num }} vendidos{% if r.em_kits %} · +{{ r.em_kits|num }} em kits{% endif %}{% if r.margem is not none %} · margem {{ r.margem|pct(0) }}{% endif %}</small>
+            </span>
+            <span class="num">{{ r.receita|round|int|brl }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="muted mt" style="font-size:12px">Margem aqui é preço menos custo de insumos, antes das comissões.</p>
+    {% else %}
+      <p class="muted">Sem vendas no período.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

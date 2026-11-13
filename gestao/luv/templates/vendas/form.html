@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block titulo %}Nova venda{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Nova venda</h1>
+    <p class="sub">Escolha o canal e os produtos. A comissão vem do cadastro do canal.</p>
+  </div>
+  <div class="acoes"><a class="btn sec" href="{{ url_for('vendas.lista') }}">Cancelar</a></div>
+</header>
+
+<form class="grid g-2-1" method="post" id="form-venda">
+  <div class="card">
+    <div class="campos">
+      <label class="campo"><span>Data</span><input type="date" name="data" value="{{ request.form.data or data_padrao }}" required></label>
+      <label class="campo"><span>Canal</span>
+        <select name="canal_id" id="canal" required>
+          {% for c in canais %}<option value="{{ c.id }}" {{ 'selected' if ((request.form.get('canal_id') or 0)|int == c.id) or (not request.form and canal_padrao == c.id) }}>{{ c.nome }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="campo"><span>Cliente <small>(opcional)</small></span><input name="cliente" value="{{ request.form.cliente or '' }}" placeholder="Nome ou telefone"></label>
+    </div>
+
+    <h3 class="mt-lg" style="margin-bottom:10px">Produtos</h3>
+    <div class="itens" id="itens">
+      <div class="item-linha venda-linha item-cab"><span>Produto</span><span>Qtd.</span><span>Preço un.</span><span class="so-desk num">Subtotal</span><span></span></div>
+    </div>
+    <button type="button" class="btn ghost mt" id="add-item"><svg><use href="#i-mais"/></svg>Adicionar produto</button>
+
+    <div class="campos mt-lg">
+      <label class="campo"><span>Desconto</span><div class="prefixo"><i>R$</i><input name="desconto" class="dinheiro" inputmode="decimal" placeholder="0,00" value="{{ request.form.desconto or '' }}" id="desconto"></div></label>
+      <label class="campo"><span>Comissão e taxas</span><div class="prefixo"><i>R$</i><input name="comissao" class="dinheiro" inputmode="decimal" id="comissao" value="{{ request.form.comissao or '' }}"></div>
+        <span class="dica" id="comissao-dica"></span></label>
+      <input type="hidden" name="comissao_manual" id="comissao_manual" value="{{ request.form.comissao_manual or '0' }}">
+      <label class="campo span-all"><span>Observação</span><input name="observacao" value="{{ request.form.observacao or '' }}"></label>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card resumo-lateral">
+      <h2 style="margin-bottom:8px">Resumo</h2>
+      <div class="linha"><span class="muted">Subtotal</span><span id="r-bruto">R$ 0,00</span></div>
+      <div class="linha"><span class="muted">Desconto</span><span id="r-desc">R$ 0,00</span></div>
+      <div class="linha"><span class="muted">Comissão e taxas</span><span id="r-com">R$ 0,00</span></div>
+      <div class="linha total"><span>Você recebe</span><span id="r-liq">R$ 0,00</span></div>
+      <div class="linha"><span class="muted">Custo dos produtos</span><span id="r-cmv">R$ 0,00</span></div>
+      <div class="linha"><span class="muted">Sobra</span><span id="r-sobra">R$ 0,00</span></div>
+      <p class="muted" id="r-receb" style="font-size:13px;margin:8px 0 14px"></p>
+      <label class="switch" style="margin-bottom:16px"><input type="checkbox" id="recebido-chk"><i></i><span>Já recebido</span></label>
+      <input type="hidden" name="recebido" id="recebido" value="">
+      <label class="switch" style="margin-bottom:6px"><input type="checkbox" name="sem_estoque" value="1" {{ 'checked' if request.form.sem_estoque }}><i></i><span>Venda antiga, não baixar estoque</span></label>
+      <p class="muted" style="font-size:12px;margin:0 0 16px">Para pedidos de antes de você contar o estoque. Entra na receita e no custo, mas não mexe no estoque.</p>
+      <button class="btn" type="submit" style="width:100%">Registrar venda</button>
+      <button class="btn sec mt" type="submit" name="continuar" value="1" style="width:100%">Registrar e lançar outra</button>
+    </div>
+  </aside>
+</form>
+
+<template id="tpl-item">
+  <div class="item-linha venda-linha" data-item>
+    <select name="item_produto" data-produto><option value="">Escolha…</option>
+      {% for p in produtos %}<option value="{{ p.id }}">{{ p.nome }}{% if p.sabores_por_kit %} · kit com {{ p.sabores_por_kit }}{% endif %}</option>{% endfor %}
+    </select>
+    <input name="item_qtd" class="num" inputmode="decimal" value="1" data-qtd>
+    <div class="prefixo"><i>R$</i><input name="item_preco" class="dinheiro" inputmode="decimal" data-preco></div>
+    <span class="num so-desk" data-sub>—</span>
+    <button type="button" class="btn-x" data-remover title="Remover">×</button>
+    <input type="hidden" name="item_sabores" data-sabores-campo>
+    <div class="sabores hidden" data-sabores></div>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DADOS = {{ dados_json|safe }};
+const prod = Object.fromEntries(DADOS.produtos.map(p => [p.id, p]));
+const sabores = DADOS.produtos.filter(p => !p.kit);
+const canais = Object.fromEntries(DADOS.canais.map(c => [c.id, c]));
+const $ = s => document.querySelector(s);
+const itens = $('#itens');
+
+function addItem(produtoId) {
+  const n = $('#tpl-item').content.firstElementChild.cloneNode(true);
+  itens.appendChild(n);
+  const sel = n.querySelector('[data-produto]');
+  if (produtoId) { sel.value = produtoId; aoTrocarProduto(n); }
+  sel.addEventListener('change', () => aoTrocarProduto(n));
+  n.querySelector('[data-qtd]').addEventListener('input', recalcular);
+  n.querySelector('[data-preco]').addEventListener('input', recalcular);
+  n.querySelector('[data-remover]').addEventListener('click', () => { n.remove(); recalcular(); });
+  return n;
+}
+
+function aoTrocarProduto(n) {
+  const p = prod[n.querySelector('[data-produto]').value];
+  n.querySelector('[data-preco]').value = p ? Luv.paraTexto(p.preco) : '';
+  const box = n.querySelector('[data-sabores]');
+  box.innerHTML = '';
+  box.classList.toggle('hidden', !(p && p.kit));
+  if (p && p.kit) {
+    const rot = document.createElement('span'); rot.textContent = 'Sabores:'; box.appendChild(rot);
+    for (let i = 0; i < p.kit; i++) {
+      const s = document.createElement('select');
+      s.innerHTML = sabores.map(x => `<option value="${x.id}">${x.nome}${x.estoque <= 0 ? ' (sem estoque)' : ''}</option>`).join('');
+      s.value = sabores[i % sabores.length]?.id;
+      s.addEventListener('change', recalcular);
+      box.appendChild(s);
+    }
+  }
+  recalcular();
+}
+
+function recalcular() {
+  let bruto = 0, cmv = 0;
+  itens.querySelectorAll('[data-item]').forEach(n => {
+    const p = prod[n.querySelector('[data-produto]').value];
+    const q = Luv.numero(n.querySelector('[data-qtd]').value) || 0;
+    const preco = Luv.centavos(n.querySelector('[data-preco]').value) || 0;
+    const sub = q * preco;
+    bruto += sub;
+    n.querySelector('[data-sub]').textContent = p ? Luv.brl(sub) : '—';
+    const sels = [...n.querySelectorAll('[data-sabores] select')];
+    n.querySelector('[data-sabores-campo]').value = sels.map(s => s.value).join(',');
+    if (p) {
+      if (p.kit) cmv += q * sels.reduce((t, s) => t + (prod[s.value]?.custo || 0), 0);
+      else cmv += q * p.custo;
+    }
+  });
+  const desc = Math.min(Luv.centavos($('#desconto').value) || 0, bruto);
+  const canal = canais[$('#canal').value];
+  const base = Math.max(bruto - desc, 0);
+  const auto = canal && base > 0 ? Math.round(base * canal.pct / 100 + canal.fixa) : 0;
+  const manual = $('#comissao_manual').value === '1';
+  if (!manual) $('#comissao').value = auto ? Luv.paraTexto(auto) : '';
+  const com = manual ? (Luv.centavos($('#comissao').value) || 0) : auto;
+  $('#comissao-dica').textContent = canal ? (canal.pct ? `${String(canal.pct).replace('.', ',')}% do canal ${canal.nome}` : `${canal.nome} não cobra comissão`) : '';
+  const liq = Math.max(bruto - desc - com, 0);
+  $('#r-bruto').textContent = Luv.brl(bruto);
+  $('#r-desc').textContent = desc ? '−' + Luv.brl(desc) : Luv.brl(0);
+  $('#r-com').textContent = com ? '−' + Luv.brl(com) : Luv.brl(0);
+  $('#r-liq').textContent = Luv.brl(liq);
+  $('#r-cmv').textContent = cmv ? '−' + Luv.brl(cmv) : Luv.brl(0);
+  const sobra = liq - cmv;
+  $('#r-sobra').textContent = Luv.brl(sobra);
+  $('#r-sobra').className = sobra < 0 ? 'neg' : '';
+  if (canal) {
+    const chk = $('#recebido-chk');
+    if (!chk.dataset.mexido) chk.checked = !canal.prazo;
+    $('#recebido').value = chk.checked ? '1' : '0';
+    $('#r-receb').textContent = chk.checked ? 'Entra no caixa na data da venda.'
+      : `Fica a receber em ${canal.prazo} dia${canal.prazo === 1 ? '' : 's'} (repasse do ${canal.nome}).`;
+  }
+}
+
+$('#add-item').addEventListener('click', () => addItem().querySelector('select').focus());
+$('#desconto').addEventListener('input', recalcular);
+$('#canal').addEventListener('change', () => { $('#comissao_manual').value = '0'; delete $('#recebido-chk').dataset.mexido; recalcular(); });
+$('#comissao').addEventListener('input', () => { $('#comissao_manual').value = '1'; recalcular(); });
+$('#recebido-chk').addEventListener('change', e => { e.target.dataset.mexido = '1'; recalcular(); });
+addItem(DADOS.produtos[0]?.id);
+</script>
+{% endblock %}

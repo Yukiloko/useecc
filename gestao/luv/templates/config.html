@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% from "_macros.html" import dinheiro %}
+{% block titulo %}Configurações<dialog id="dlg-acertar">
+  <form method="post" class="form">
+    <div>
+      <h2 data-campo="nome">Acertar pelo banco</h2>
+      <p class="sub">Hoje a ferramenta mostra <b data-campo="atual"></b>. Informe quanto o banco mostra agora e o saldo inicial é recalculado para os dois baterem.</p>
+    </div>
+    <label class="campo"><span>Saldo no banco hoje</span>
+      <div class="prefixo"><i>R$</i><input name="saldo_real" class="dinheiro" inputmode="decimal" placeholder="0,00" required></div>
+      <span class="dica">Lance antes tudo o que já aconteceu e que você quer registrar (equipamentos, compras, vendas, aportes).</span>
+    </label>
+    <div class="rodape-form">
+      <button type="button" class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn">Acertar</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Configurações</h1>
+    <p class="sub">Contas, canais de venda e o plano de categorias que alimenta a DRE.</p>
+  </div>
+</header>
+
+<div class="grid g2">
+  <form class="card form" method="post" action="{{ url_for('config.empresa') }}">
+    <h2>Negócio</h2>
+    <label class="campo"><span>Nome</span><input name="empresa" value="{{ empresa }}"></label>
+    <div class="rodape-form"><button class="btn sec">Salvar</button></div>
+  </form>
+  <div class="card">
+    <h2 style="margin-bottom:10px">Backup</h2>
+    <p class="muted" style="font-size:14px">No site, os dados ficam no Supabase: no painel dele, <b>Table Editor</b> › cada tabela › <b>Export to CSV</b>. No computador, ficam no arquivo <code>gestao/dados/luv.db</code>. Daqui você exporta os <a href="{{ url_for('financeiro.lancamentos_csv') }}">lançamentos do mês</a> e a <a href="{{ url_for('financeiro.dre_csv') }}">DRE do ano</a> em CSV.</p>
+  </div>
+</div>
+
+<div class="card flush mt" id="contas">
+  <div class="card-tit"><h2>Contas</h2><span class="muted">Onde o dinheiro fica: banco, Pix, dinheiro em espécie</span></div>
+  <table>
+    <thead><tr><th>Conta · saldo inicial</th><th class="num">Saldo hoje</th><th></th></tr></thead>
+    <tbody>
+    {% for c in contas %}
+      <tr>
+        <td style="padding-top:6px;padding-bottom:6px">
+          <form method="post" action="{{ url_for('config.conta_salvar') }}" class="item-linha" style="grid-template-columns:minmax(0,2fr) 160px auto auto">
+            <input type="hidden" name="id" value="{{ c.id }}">
+            <input name="nome" value="{{ c.nome }}" aria-label="Nome">
+            <div class="prefixo"><i>R$</i><input name="saldo_inicial" class="dinheiro" value="{{ (c.saldo_inicial / 100)|num(2) }}" aria-label="Saldo inicial"></div>
+            <label class="check"><input type="checkbox" name="inativa" value="1" {{ 'checked' if not c.ativa }}> Arquivada</label>
+            <button class="btn sec pq">Salvar</button>
+          </form>
+        </td>
+        <td class="num"><b class="{{ 'neg' if c.saldo < 0 }}">{{ c.saldo|brl }}</b></td>
+        <td class="acoes-linha">
+          <button class="btn ghost pq" data-abrir="dlg-acertar" data-acao="{{ url_for('config.conta_acertar', cid=c.id) }}"
+            data-set-nome="{{ c.nome }}" data-set-atual="{{ c.saldo|brl }}">Acertar pelo banco</button>
+        </td>
+      </tr>
+    {% endfor %}
+      <tr>
+        <td colspan="3" style="padding-top:10px;padding-bottom:14px">
+          <form method="post" action="{{ url_for('config.conta_salvar') }}" class="item-linha" style="grid-template-columns:minmax(0,2fr) 180px auto">
+            <input name="nome" placeholder="Nova conta, ex.: Nubank PJ" aria-label="Nome">
+            <div class="prefixo"><i>R$</i><input name="saldo_inicial" class="dinheiro" placeholder="Saldo inicial" aria-label="Saldo inicial"></div>
+            <button class="btn pq">Adicionar</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card flush mt" id="canais">
+  <div class="card-tit"><h2>Canais de venda</h2><span class="muted">Comissão e prazo de repasse calculados em cada venda</span></div>
+  <div class="tabela-wrap">
+  <table>
+    <thead><tr><th>Canal</th><th class="num">Comissão</th><th class="num">Taxa de pagamento</th><th class="num">Taxa por pedido</th><th class="num">Repasse em</th><th>Recebe na conta</th><th></th></tr></thead>
+    <tbody>
+    {% for c in canais %}
+      {% set fid = 'canal-' ~ c.id %}
+      <tr>
+        <td><form id="{{ fid }}" method="post" action="{{ url_for('config.canal_salvar') }}"><input type="hidden" name="id" value="{{ c.id }}"></form>
+          <input form="{{ fid }}" name="nome" value="{{ c.nome }}" style="min-width:150px"></td>
+        <td><div class="sufixo"><input form="{{ fid }}" name="comissao_pct" class="num" value="{{ c.comissao_pct|num(1) }}" style="width:90px"><i>%</i></div></td>
+        <td><div class="sufixo"><input form="{{ fid }}" name="taxa_pagamento_pct" class="num" value="{{ c.taxa_pagamento_pct|num(1) }}" style="width:90px"><i>%</i></div></td>
+        <td><div class="prefixo"><i>R$</i><input form="{{ fid }}" name="taxa_fixa" class="dinheiro" value="{{ (c.taxa_fixa / 100)|num(2) }}" style="width:110px"></div></td>
+        <td><div class="sufixo"><input form="{{ fid }}" name="prazo_dias" class="num" value="{{ c.prazo_dias }}" style="width:90px"><i>dias</i></div></td>
+        <td><select form="{{ fid }}" name="conta_id" style="min-width:130px"><option value="">Sem conta</option>{% for ct in contas %}<option value="{{ ct.id }}" {{ 'selected' if c.conta_id == ct.id }}>{{ ct.nome }}</option>{% endfor %}</select></td>
+        <td class="acoes-linha"><label class="check" style="margin-right:8px"><input form="{{ fid }}" type="checkbox" name="inativo" value="1" {{ 'checked' if not c.ativo }}> Arquivado</label><button form="{{ fid }}" class="btn sec pq">Salvar</button></td>
+      </tr>
+    {% endfor %}
+      <tr>
+        <td><form id="canal-novo" method="post" action="{{ url_for('config.canal_salvar') }}"></form><input form="canal-novo" name="nome" placeholder="Novo canal" style="min-width:150px"></td>
+        <td><div class="sufixo"><input form="canal-novo" name="comissao_pct" class="num" placeholder="0" style="width:90px"><i>%</i></div></td>
+        <td><div class="sufixo"><input form="canal-novo" name="taxa_pagamento_pct" class="num" placeholder="0" style="width:90px"><i>%</i></div></td>
+        <td><div class="prefixo"><i>R$</i><input form="canal-novo" name="taxa_fixa" class="dinheiro" placeholder="0,00" style="width:110px"></div></td>
+        <td><div class="sufixo"><input form="canal-novo" name="prazo_dias" class="num" placeholder="0" style="width:90px"><i>dias</i></div></td>
+        <td><select form="canal-novo" name="conta_id" style="min-width:130px">{% for ct in contas %}<option value="{{ ct.id }}">{{ ct.nome }}</option>{% endfor %}</select></td>
+        <td class="acoes-linha"><button form="canal-novo" class="btn pq">Adicionar</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="card mt" id="categorias">
+  <div class="card-tit"><h2>Categorias</h2><span class="muted">Clique no nome para editar</span></div>
+  <div class="grid g3">
+    {% for g in editaveis %}
+      <div>
+        <h3 style="margin-bottom:6px">{{ grupos[g][0] }}</h3>
+        <p class="muted" style="font-size:12px;margin-bottom:8px">{{ 'Entrada' if grupos[g][1] == 'entrada' else 'Saída' }} · {{ 'DRE e caixa' if grupos[g][2] else 'só caixa' }}</p>
+        <ul class="lista">
+          {% for c in categorias[g] %}
+            <li>
+              {% if editar == c.id|string %}
+                <form method="post" action="{{ url_for('config.categoria_salvar') }}" class="item-linha" style="grid-template-columns:1fr auto;width:100%">
+                  <input type="hidden" name="id" value="{{ c.id }}">
+                  <input name="nome" value="{{ c.nome }}" autofocus>
+                  <select name="grupo" style="grid-column:1">{% for gg in editaveis %}<option value="{{ gg }}" {{ 'selected' if gg == g }}>{{ grupos[gg][0] }}</option>{% endfor %}</select>
+                  <button class="btn pq" style="grid-row:1;grid-column:2">Salvar</button>
+                </form>
+              {% else %}
+                <a href="{{ url_for('config.index', editar=c.id) }}#categorias" style="color:inherit">{{ c.nome }}</a>
+                <span>
+                  {% if uso.get(c.id) %}<small class="muted">{{ uso[c.id] }}</small>{% else %}
+                  <form method="post" action="{{ url_for('config.categoria_excluir', cid=c.id) }}" style="display:inline" data-confirmar="Excluir a categoria {{ c.nome }}?"><button class="btn-x" title="Excluir">×</button></form>{% endif %}
+                </span>
+              {% endif %}
+            </li>
+          {% endfor %}
+          <li>
+            <form method="post" action="{{ url_for('config.categoria_salvar') }}" class="item-linha" style="grid-template-columns:1fr auto;width:100%">
+              <input type="hidden" name="grupo" value="{{ g }}">
+              <input name="nome" placeholder="Nova categoria" style="height:34px;font-size:14px">
+              <button class="btn ghost pq">Adicionar</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+<dialog id="dlg-acertar">
+  <form method="post" class="form">
+    <div>
+      <h2 data-campo="nome">Acertar pelo banco</h2>
+      <p class="sub">Hoje a ferramenta mostra <b data-campo="atual"></b>. Informe quanto o banco mostra agora e o saldo inicial é recalculado para os dois baterem.</p>
+    </div>
+    <label class="campo"><span>Saldo no banco hoje</span>
+      <div class="prefixo"><i>R$</i><input name="saldo_real" class="dinheiro" inputmode="decimal" placeholder="0,00" required></div>
+      <span class="dica">Lance antes tudo o que já aconteceu e que você quer registrar (equipamentos, compras, vendas, aportes).</span>
+    </label>
+    <div class="rodape-form">
+      <button type="button" class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn">Acertar</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

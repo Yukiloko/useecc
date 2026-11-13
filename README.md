@@ -63,3 +63,7 @@ scripts/custos.ts                 resumo de custo por vídeo
 ## Licença do Remotion
 
 O Remotion é gratuito para pessoas físicas e empresas com até 3 funcionários. Acima disso exige licença paga. Veja https://www.remotion.dev/license.
+
+## Gestão da LUV Brownies
+
+A pasta [`gestao/`](gestao/README.md) tem a ferramenta de gestão financeira e de estoque da marca, em Python (Flask + SQLite).

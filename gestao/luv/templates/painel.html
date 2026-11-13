@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% from "_macros.html" import periodo, delta, sinal, status_pill, vazio %}
+{% block titulo %}Painel{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Painel</h1>
+    <p class="sub">Como está o negócio em {{ per.nome }}.</p>
+  </div>
+  <div class="acoes">
+    {{ periodo(per, 'painel.index') }}
+    <a class="btn sec" href="{{ url_for('financeiro.lancamento_novo') }}">Lançamento</a>
+    <a class="btn" href="{{ url_for('vendas.nova') }}"><svg><use href="#i-mais"/></svg>Venda</a>
+  </div>
+</header>
+
+<section class="grid g4">
+  <div class="card kpi">
+    <span class="kpi-rot">Saldo em caixa</span>
+    <span class="kpi-val {{ 'neg' if saldo_total < 0 }}">{{ saldo_total|brl }}</span>
+    <span class="kpi-rodape">Em 30 dias: {{ saldo_30|brl }}</span>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-rot">Faturamento</span>
+    <span class="kpi-val">{{ receita|brl }}</span>
+    <span class="kpi-rodape">{{ delta(variacao(receita, receita_ant)) }} vs. mês anterior</span>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-rot">Lucro líquido</span>
+    <span class="kpi-val {{ sinal(lucro) }}">{{ lucro|brl }}</span>
+    <span class="kpi-rodape">Margem {{ atual.margem_liquida|pct }}</span>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-rot">Margem de contribuição</span>
+    <span class="kpi-val">{{ atual.margem_contribuicao|pct }}</span>
+    <span class="kpi-rodape">Ticket médio {{ atual.ticket_medio|brl if atual.ticket_medio else '—' }}</span>
+  </div>
+</section>
+
+<section class="grid g-2-1 mt">
+  <div class="card">
+    <div class="card-tit"><h2>Receita e lucro</h2><a href="{{ url_for('financeiro.dre', visao='ano', ano=per.ano) }}">Ver DRE</a></div>
+    {{ grafico_resultado }}
+    <div class="legenda"><span><i style="background:var(--chart-neutral)"></i>Receita bruta</span><span><i style="background:var(--chart-1)"></i>Lucro líquido</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-tit"><h2>Ponto de equilíbrio</h2></div>
+    {% if atual.pe_unidades_dia %}
+      {% set progresso = (atual.unidades_dia / atual.pe_unidades_dia) if atual.pe_unidades_dia else 0 %}
+      <div class="kpi">
+        <span class="kpi-val">{{ atual.pe_unidades_dia|num(1) }} <small style="font-size:15px;font-weight:500">brownies/dia</small></span>
+        <span class="kpi-rodape">Você vendeu {{ atual.unidades_dia|num(1) }} por dia neste mês.</span>
+      </div>
+      <div class="barra {{ 'verde' if progresso >= 1 else 'laranja' }} mt"><span style="width: {{ [progresso * 100, 100]|min }}%"></span></div>
+      <ul class="lista mt">
+        <li><span class="muted">Faturamento de equilíbrio</span><b class="num">{{ atual.ponto_equilibrio|brl }}</b></li>
+        <li><span class="muted">Despesas fixas do mês</span><b class="num">{{ atual.despesas_fixas|brl }}</b></li>
+        <li><span class="muted">Unidades vendidas</span><b class="num">{{ atual.unidades|num }}</b></li>
+      </ul>
+    {% else %}
+      {{ vazio('Ainda sem base para calcular', 'O ponto de equilíbrio aparece quando houver vendas e despesas fixas lançadas no mês.') }}
+    {% endif %}
+  </div>
+</section>
+
+<section class="grid g3 mt">
+  <div class="card">
+    <div class="card-tit"><h2>Vendas por canal</h2><a href="{{ url_for('vendas.lista', mes=per.chave) }}">Ver vendas</a></div>
+    {% set com_venda = canais|selectattr('pedidos')|list %}
+    {% if com_venda %}
+      {% for c in canais %}
+        <div class="canal-linha">
+          <span><b style="font-weight:500">{{ c.nome }}</b> <small class="muted">· {{ c.pedidos }} pedidos</small></span>
+          <span class="num">{{ c.bruto|brl }}</span>
+          <div class="barra"><span style="width: {{ (c.bruto / max_canal * 100)|round(1) }}%"></span></div>
+          <small class="muted">Comissão {{ c.comissao|brl }}</small>
+          <small class="muted num">Líquido {{ (c.bruto - c.desconto - c.comissao)|brl }}</small>
+        </div>
+      {% endfor %}
+    {% else %}
+      {{ vazio('Nenhuma venda no mês', 'Registre os pedidos para ver o faturamento líquido de cada canal.', url_for('vendas.nova'), 'Registrar venda') }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-tit"><h2>Contas da semana</h2><a href="{{ url_for('financeiro.lancamentos', status='pendente') }}">Ver todas</a></div>
+    {% if pend or repasses.n %}
+      <ul class="lista">
+        {% if repasses.n %}
+          <li>
+            <span class="princ"><b>Repasses de vendas</b><small class="muted">{{ repasses.n }} pedido{{ 's' if repasses.n > 1 }} · a partir de {{ repasses.primeiro|data_curta }}</small></span>
+            <span style="text-align:right">
+              <span class="num pos">+{{ repasses.valor|brl }}</span><br>
+              <a class="pill {{ 'atrasado' if repasses.atrasado else 'azul' }}" href="{{ url_for('financeiro.lancamentos', status='pendente', tipo='entrada', mes=repasses.primeiro[:7]) }}">Dar baixa</a>
+            </span>
+          </li>
+        {% endif %}
+        {% for l in pend[:6] %}
+          <li>
+            <span class="princ"><b>{{ l.descricao }}</b><small class="muted">{{ l.vencimento|data_curta }} · {{ l.categoria }}</small></span>
+            <span style="text-align:right">
+              <span class="num {{ 'pos' if l.tipo == 'entrada' }}">{{ '+' if l.tipo == 'entrada' else '' }}{{ l.valor|brl }}</span><br>
+              {{ status_pill(status(l)) }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="kpi-rodape mt">
+        <span>A pagar {{ resumo_pend.pagar|brl }}</span> · <span>A receber {{ resumo_pend.receber|brl }}</span>
+      </div>
+    {% else %}
+      {{ vazio('Nada vencendo', 'Sem contas atrasadas ou para os próximos 7 dias.') }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-tit"><h2>Estoque</h2><a href="{{ url_for('estoque.insumos', filtro='alerta') }}">Ver insumos</a></div>
+    {% if alertas or zerados %}
+      <ul class="lista">
+        {% for a in alertas[:6] %}
+          <li>
+            <span class="princ"><b>{{ a.nome }}</b><small class="muted">Tem {{ a.estoque|qtd(a.unidade) }} · mínimo {{ a.estoque_minimo|qtd(a.unidade) }}</small></span>
+            {{ status_pill('zerado' if a.estoque <= 0 else 'baixo') }}
+          </li>
+        {% endfor %}
+        {% for p in zerados[:4] %}
+          <li><span class="princ"><b>{{ p.nome }}</b><small class="muted">Produto sem estoque</small></span>{{ status_pill('zerado') }}</li>
+        {% endfor %}
+      </ul>
+      {% if alertas %}<a class="btn sec pq mt" href="{{ url_for('estoque.compra_nova', sugestao=1) }}">Montar lista de compras</a>{% endif %}
+    {% else %}
+      {{ vazio('Tudo abastecido', 'Nenhum insumo abaixo do mínimo.') }}
+    {% endif %}
+  </div>
+</section>
+
+<section class="grid g2 mt">
+  <div class="card">
+    <div class="card-tit"><h2>Caixa nos próximos 30 dias</h2><a href="{{ url_for('financeiro.fluxo') }}">Fluxo de caixa</a></div>
+    {{ grafico_caixa }}
+    <p class="muted mt" style="font-size:13px">Saldo de hoje mais o que está a receber e a pagar, na data de vencimento.</p>
+  </div>
+  <div class="card">
+    <div class="card-tit"><h2>Contas</h2><a href="{{ url_for('config.index') }}#contas">Gerenciar</a></div>
+    <ul class="lista">
+      {% for c in contas %}
+        <li>
+          <span class="princ"><b>{{ c.nome }}</b>
+            <small class="muted">{% if c.a_receber %}A receber {{ c.a_receber|brl }}{% endif %}{% if c.a_receber and c.a_pagar %} · {% endif %}{% if c.a_pagar %}A pagar {{ c.a_pagar|brl }}{% endif %}{% if not c.a_receber and not c.a_pagar %}Sem pendências{% endif %}</small>
+          </span>
+          <b class="num {{ 'neg' if c.saldo < 0 }}">{{ c.saldo|brl }}</b>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

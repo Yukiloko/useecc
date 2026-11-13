@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_macros.html" import dinheiro, vazio %}
+{% block titulo %}Despesas recorrentes{% endblock %}
+{% block conteudo %}
+{% set ed = (recorrencias|selectattr('id', 'equalto', editar)|first) if editar else none %}
+<header class="cabecalho">
+  <div>
+    <h1>Despesas recorrentes</h1>
+    <p class="sub">Contas que se repetem todo mês. Gere os lançamentos do mês com um clique.</p>
+  </div>
+  <div class="acoes">
+    <form method="post" action="{{ url_for('financeiro.recorrentes_gerar') }}" class="acoes">
+      <input type="hidden" name="mes" value="{{ per.chave }}">
+      <button class="btn">Gerar lançamentos de {{ per.nome }}</button>
+    </form>
+  </div>
+</header>
+
+<div class="grid g-2-1">
+  <div class="card flush">
+    <div class="card-tit"><h2>Cadastradas</h2><span class="muted">Total mensal {{ total|brl }}</span></div>
+    {% if recorrencias %}
+    <table>
+      <thead><tr><th>Descrição</th><th>Dia</th><th class="num">Valor</th><th>{{ per.nome|capitalize }}</th><th></th></tr></thead>
+      <tbody>
+      {% for r in recorrencias %}
+        <tr class="{{ 'muted' if not r.ativa }}">
+          <td>{{ r.descricao }}<span class="sub">{{ r.categoria }} · {{ grupos[r.grupo][0] }}{% if not r.ativa %} · pausada{% endif %}</span></td>
+          <td>{{ r.dia }}{% if r.mes_seguinte %}<span class="sub">do mês seguinte</span>{% endif %}</td>
+          <td class="num">{{ r.valor|brl }}</td>
+          <td>{% if r.id in gerados %}<span class="pill pago">Gerado</span>{% elif r.ativa %}<span class="pill">Falta gerar</span>{% else %}—{% endif %}</td>
+          <td class="acoes-linha">
+            <a class="btn ghost pq" href="{{ url_for('financeiro.recorrentes', editar=r.id) }}">Editar</a>
+            <form method="post" action="{{ url_for('financeiro.recorrente_excluir', rid=r.id) }}" data-confirmar="Remover esta recorrência?"><button class="btn-x">×</button></form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      {{ vazio('Nenhuma recorrência', 'Cadastre ao lado aluguel, Anota AI, internet, anúncios e outras contas fixas.') }}
+    {% endif %}
+  </div>
+
+  <form class="card form" method="post" action="{{ url_for('financeiro.recorrentes') }}">
+    <h2>{{ 'Editar recorrência' if ed else 'Nova recorrência' }}</h2>
+    {% if ed %}<input type="hidden" name="id" value="{{ ed.id }}">{% endif %}
+    <label class="campo"><span>Descrição</span><input name="descricao" value="{{ ed.descricao if ed else '' }}" placeholder="Ex.: Anota AI" required></label>
+    {{ dinheiro('valor', ed.valor if ed else none, 'Valor mensal', attrs='required') }}
+    <label class="campo"><span>Categoria</span>
+      <select name="categoria_id" required>
+        {% for g, cats in categorias.items() if cats and grupos[g][1] == 'saida' %}
+          <optgroup label="{{ grupos[g][0] }}">{% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if ed and ed.categoria_id == c.id }}>{{ c.nome }}</option>{% endfor %}</optgroup>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="campos">
+      <label class="campo"><span>Dia do vencimento</span><input name="dia" type="number" min="1" max="31" value="{{ ed.dia if ed else 10 }}"></label>
+      <label class="campo"><span>Conta</span>
+        <select name="conta_id"><option value="">Sem conta</option>{% for c in contas %}<option value="{{ c.id }}" {{ 'selected' if ed and ed.conta_id == c.id }}>{{ c.nome }}</option>{% endfor %}</select>
+      </label>
+    </div>
+    <div class="campo">
+      <label class="switch"><input type="checkbox" name="mes_seguinte" value="1" {{ 'checked' if ed and ed.mes_seguinte }}><i></i><span>Vence no mês seguinte</span></label>
+      <span class="dica">Para contas que se referem a um mês e são pagas no outro, como o DAS. Gerando em novembro, a conta de novembro vence em dezembro e entra na DRE de novembro.</span>
+    </div>
+    {% if ed %}
+    <label class="switch"><input type="checkbox" name="ativa" value="1" {{ 'checked' if ed.ativa }} onchange="this.nextElementSibling.nextElementSibling.textContent = this.checked ? 'Ativa' : 'Pausada'"><i></i><span>{{ 'Ativa' if ed.ativa else 'Pausada' }}</span></label>
+    <input type="hidden" name="ativa" value="0" disabled id="ativa-off">
+    {% endif %}
+    <div class="rodape-form">
+      {% if ed %}<a class="btn sec" href="{{ url_for('financeiro.recorrentes') }}">Cancelar</a>{% endif %}
+      <button class="btn">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// checkbox desmarcada não é enviada: manda ativa=0 nesse caso
+const chk = document.querySelector('input[name=ativa][type=checkbox]');
+if (chk) chk.form.addEventListener('submit', () => { document.getElementById('ativa-off').disabled = chk.checked; });
+</script>
+{% endblock %}

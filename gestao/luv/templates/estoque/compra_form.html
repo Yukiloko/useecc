@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block titulo %}Nova compra{% endblock %}
+{% block conteudo %}
+<header class="cabecalho">
+  <div>
+    <h1>Nova compra</h1>
+    <p class="sub">Informe a quantidade na unidade do insumo e o valor pago no item.</p>
+  </div>
+  <div class="acoes"><a class="btn sec" href="{{ url_for('estoque.compras') }}">Cancelar</a></div>
+</header>
+
+{% if not insumos %}
+  <div class="card"><div class="vazio"><b>Cadastre os insumos primeiro</b><span>A compra precisa saber em que item somar o estoque.</span><div><a class="btn" href="{{ url_for('estoque.insumo_form') }}">Novo insumo</a></div></div></div>
+{% else %}
+<form class="grid g-2-1" method="post" id="form-compra">
+  <div class="card">
+    <div class="campos">
+      <label class="campo"><span>Data</span><input type="date" name="data" value="{{ request.form.data or hoje_iso }}" required></label>
+      <label class="campo span-2"><span>Fornecedor</span><input name="fornecedor" list="fornecedores" value="{{ request.form.fornecedor or '' }}" placeholder="Ex.: Atacadão"></label>
+      <datalist id="fornecedores">{% for f in fornecedores %}<option value="{{ f }}">{% endfor %}</datalist>
+    </div>
+    <h3 class="mt-lg" style="margin-bottom:10px">Itens</h3>
+    <div class="itens" id="itens">
+      <div class="item-linha compra-linha item-cab"><span>Insumo</span><span>Quantidade</span><span>Valor pago</span><span class="so-desk num">Custo</span><span></span></div>
+    </div>
+    <button type="button" class="btn ghost mt" id="add-item"><svg><use href="#i-mais"/></svg>Adicionar item</button>
+    <label class="campo mt-lg"><span>Observação</span><input name="observacao" value="{{ request.form.observacao or '' }}" placeholder="Nº da nota, forma de pagamento…"></label>
+  </div>
+
+  <aside>
+    <div class="card resumo-lateral">
+      <h2 style="margin-bottom:8px">Pagamento</h2>
+      <div class="linha total" style="border:0;margin:0;padding-top:0"><span>Total</span><span id="total">R$ 0,00</span></div>
+      <label class="campo mt"><span>Conta</span>
+        <select name="conta_id">{% for c in contas %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}<option value="">Sem conta</option></select>
+      </label>
+      <label class="switch mt"><input type="checkbox" name="bolso" value="1" id="bolso" {{ 'checked' if request.form.bolso }}><i></i><span>Paguei do meu bolso</span></label>
+      <p class="muted hidden" id="bolso-dica" style="font-size:12px;margin-top:6px">Registra um aporte seu do mesmo valor. O saldo da conta não muda.</p>
+      <label class="switch mt" id="campo-pago"><input type="checkbox" name="pago" value="1" id="pago" checked><i></i><span>Paga à vista</span></label>
+      <label class="campo mt hidden" id="campo-venc"><span>Vencimento</span><input type="date" name="vencimento" value="{{ request.form.vencimento or hoje_iso }}"></label>
+      <button class="btn mt" style="width:100%">Registrar compra</button>
+    </div>
+  </aside>
+</form>
+
+<template id="tpl-item">
+  <div class="item-linha compra-linha" data-item>
+    <select name="item_insumo" data-insumo><option value="">Escolha…</option>
+      {% for i in insumos %}<option value="{{ i.id }}">{{ i.nome }}</option>{% endfor %}
+    </select>
+    <div class="sufixo"><input name="item_qtd" class="num" inputmode="decimal" data-qtd><i data-un>g</i></div>
+    <div class="prefixo"><i>R$</i><input name="item_valor" class="dinheiro" inputmode="decimal" data-valor></div>
+    <span class="num so-desk muted" data-custo style="font-size:13px">—</span>
+    <button type="button" class="btn-x" data-remover title="Remover">×</button>
+  </div>
+</template>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const INSUMOS = Object.fromEntries({{ dados_json|safe }}.map(i => [i.id, i]));
+const SUGESTAO = {{ sugestao|tojson }};
+const itens = document.getElementById('itens');
+function porUnidade(c, u) {
+  return u === 'g' ? Luv.brl(c * 1000) + '/kg' : u === 'ml' ? Luv.brl(c * 1000) + '/L' : Luv.brl(c) + '/un';
+}
+function addItem(id, qtd) {
+  const n = document.getElementById('tpl-item').content.firstElementChild.cloneNode(true);
+  itens.appendChild(n);
+  const sel = n.querySelector('[data-insumo]');
+  const sync = () => {
+    const i = INSUMOS[sel.value];
+    n.querySelector('[data-un]').textContent = i ? i.unidade : '';
+    const q = Luv.numero(n.querySelector('[data-qtd]').value);
+    const v = Luv.centavos(n.querySelector('[data-valor]').value);
+    let txt = '—';
+    if (i && q > 0 && v >= 0) {
+      const novo = v / q;
+      txt = porUnidade(novo, i.unidade);
+      if (i.custo) {
+        const dif = (novo - i.custo) / i.custo;
+        if (Math.abs(dif) >= 0.01) txt += ` (${dif > 0 ? '+' : ''}${(dif * 100).toFixed(0)}%)`;
+      }
+    }
+    n.querySelector('[data-custo]').textContent = txt;
+    total();
+  };
+  sel.addEventListener('change', sync);
+  n.querySelectorAll('input').forEach(x => x.addEventListener('input', sync));
+  n.querySelector('[data-remover]').addEventListener('click', () => { n.remove(); total(); });
+  if (id) {
+    sel.value = id;
+    if (qtd) {
+      n.querySelector('[data-qtd]').value = Math.ceil(qtd).toLocaleString('pt-BR');
+      const i = INSUMOS[id];
+      if (i && i.custo) n.querySelector('[data-valor]').value = Luv.paraTexto(Math.round(i.custo * Math.ceil(qtd)));
+    }
+  }
+  sync();
+  return n;
+}
+function total() {
+  let t = 0;
+  itens.querySelectorAll('[data-valor]').forEach(x => t += Luv.centavos(x.value) || 0);
+  document.getElementById('total').textContent = Luv.brl(t);
+}
+if (itens) {
+  document.getElementById('add-item').addEventListener('click', () => addItem().querySelector('select').focus());
+  if (SUGESTAO.length) SUGESTAO.forEach(s => addItem(s.id, s.sugestao)); else addItem();
+  const pago = document.getElementById('pago');
+  const bolso = document.getElementById('bolso');
+  const syncPag = () => {
+    document.getElementById('campo-pago').classList.toggle('hidden', bolso.checked);
+    document.getElementById('bolso-dica').classList.toggle('hidden', !bolso.checked);
+    document.getElementById('campo-venc').classList.toggle('hidden', pago.checked || bolso.checked);
+  };
+  pago.addEventListener('change', syncPag);
+  bolso.addEventListener('change', syncPag);
+  syncPag();
+}
+</script>
+{% endblock %}

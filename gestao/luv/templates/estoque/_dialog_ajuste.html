@@ -1,0 +1,62 @@
+<dialog id="dlg-ajuste">
+  <form method="post" class="form">
+    <div>
+      <h2 data-campo="nome">Ajustar estoque</h2>
+      <p class="sub">Saldo atual: <span data-campo="atual"></span></p>
+    </div>
+    <div class="seg" id="ajuste-seg" style="width:max-content;max-width:100%;flex-wrap:wrap">
+      <button type="button" class="on" data-tipo="perda">Perda</button>
+      <button type="button" data-tipo="contagem">Contagem</button>
+      <button type="button" data-tipo="entrada">Entrada</button>
+      <button type="button" data-tipo="inicial">Estoque inicial</button>
+    </div>
+    <input type="hidden" name="tipo" value="perda" id="ajuste-tipo">
+    <label class="campo"><span id="ajuste-rot">Quantidade perdida</span>
+      <div class="sufixo"><input name="quantidade" class="num" inputmode="decimal" required><i data-campo="unidade" id="ajuste-un">g</i></div>
+      <span class="dica" id="ajuste-dica">Perdas entram como custo na DRE, pelo custo médio.</span>
+    </label>
+    <label class="campo hidden" id="ajuste-custo">
+      <span id="ajuste-custo-rot">Custo por kg</span>
+      <div class="prefixo"><i>R$</i><input name="custo" class="dinheiro" inputmode="decimal" placeholder="opcional"></div>
+      <span class="dica">Em branco, usa o custo médio atual ou, para brownies, o custo da ficha técnica.</span>
+    </label>
+    <div class="campos">
+      <label class="campo"><span>Data</span><input type="date" name="data" value="{{ hoje_iso }}"></label>
+      <label class="campo"><span>Motivo</span><input name="observacao" id="ajuste-obs" placeholder="Ex.: quebrou na entrega"></label>
+    </div>
+    <div class="rodape-form">
+      <button type="button" class="btn sec" data-fechar>Cancelar</button>
+      <button class="btn">Salvar</button>
+    </div>
+  </form>
+</dialog>
+<script>
+(() => {
+  const seg = document.getElementById('ajuste-seg');
+  const textos = {
+    perda: ['Quantidade perdida', 'Perdas entram como custo na DRE, pelo custo médio.', 'Ex.: quebrou na entrega'],
+    contagem: ['Quantidade contada', 'O saldo passa a ser o que você contou. A diferença vira ajuste de estoque na DRE.', 'Ex.: contagem do fim do mês'],
+    entrada: ['Quantidade', 'Entrada sem compra (doação, sobra). Usa o custo médio atual.', 'Ex.: sobra de evento'],
+    inicial: ['Quantidade que você tem hoje', 'Para começar o controle: define o saldo sem lançar nada na DRE.', 'Estoque inicial'],
+  };
+  const custo = document.getElementById('ajuste-custo');
+  function escolher(tipo) {
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.tipo === tipo));
+    document.getElementById('ajuste-tipo').value = tipo;
+    const [rot, dica, obs] = textos[tipo];
+    document.getElementById('ajuste-rot').textContent = rot;
+    document.getElementById('ajuste-dica').textContent = dica;
+    document.getElementById('ajuste-obs').placeholder = obs;
+    custo.classList.toggle('hidden', tipo !== 'inicial');
+    const un = document.getElementById('ajuste-un').textContent.trim();
+    document.getElementById('ajuste-custo-rot').textContent =
+      'Custo por ' + (un === 'g' ? 'kg' : un === 'ml' ? 'litro' : 'unidade') + ' (opcional)';
+  }
+  seg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) escolher(b.dataset.tipo); });
+  // cada vez que o diálogo abre, começa em Perda e com os campos limpos
+  document.getElementById('dlg-ajuste').addEventListener('close', () => {
+    document.querySelector('#dlg-ajuste form').reset();
+    escolher('perda');
+  });
+})();
+</script>
